@@ -519,7 +519,27 @@ std::vector<uint8_t> instructionToMeat(NodeTypes nodeTypes, PropertiesMap proper
             data.push_back(0); // NULL terminator
         }
 
-        // TODO: Register
+        // Register
+        else if (word == "#register") {
+            std::string argument;
+            getline(stream, argument, ' ');
+            data.push_back(4); // Registration
+            data.push_back(0); // Normal String
+            data.push_back(0); // No flags
+            for (char c : argument) {
+                data.push_back(c); // Name of file to register
+            }
+
+            getline(stream, argument, ' ');
+            data.push_back(0); // Normal String
+            data.push_back(0); // No flags
+            for (char c : argument) {
+                data.push_back(c); // Path of file to register
+            }
+
+            data.push_back(0); // NULL terminator
+        }
+
         // TODO: Template
 
         // Scope Change

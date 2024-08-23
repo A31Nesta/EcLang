@@ -201,7 +201,6 @@ std::vector<std::string> meatInstructionToString(NodeTypes nodeTypes, Properties
     return data;
 }
 
-// TODO: FULLY REWRITE!!
 std::vector<std::vector<std::string>> meatToStrings(NodeTypes nodeTypes, PropertiesMap properties, const std::vector<uint8_t> beef) {
     // std::cout << "Called BEEFtoStrings()\n";
     std::vector<std::vector<std::string>> data;
@@ -253,6 +252,17 @@ std::vector<std::vector<std::string>> meatToStrings(NodeTypes nodeTypes, Propert
                 std::vector<std::string> value = auiiStringFromBEEF(beef, beefIndex);
 
                 data.push_back({"include", value.at(1)}); // Set array
+            }
+            break;
+        case 4: // Registration (register, name, file to register)
+            {
+                beefIndex += 1;
+                std::vector<std::string> name = auiiStringFromBEEF(beef, beefIndex);
+                beefIndex -= 1; // TODO: Investigate why this works lmao.
+                std::vector<std::string> value = auiiStringFromBEEF(beef, beefIndex);
+
+                // std::cout << "Name: " + name.at(1) + " | Value: " + value.at(1) + "\n";
+                data.push_back({"register", name.at(1), value.at(1)}); // Set array
             }
             break;
         
