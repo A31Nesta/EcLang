@@ -14,8 +14,9 @@
 
 // INCLUDES
 // --------
-#include <cstddef>
+#include <cstdint>
 #include <string>
+#include <vector>
 
 // CLASSES
 // -------
@@ -85,6 +86,17 @@ namespace eclang {
         */
 
     private:
+        /**
+            Takes as input the source file (string) and returns a vector of uint8_t
+            containing the compiled file.
+
+            A language descriptor is required in order to interpret the file and compile it.
+
+            This method is called during initialization if the file is a source file
+        */
+        std::vector<uint8_t> compile(std::string source, language::EcLangDescriptor* language);
+
+
         // Language Descriptor currently being used.
         // Obtained by the configuration once the EcLang object
         // figures out the language being used in the loaded file
