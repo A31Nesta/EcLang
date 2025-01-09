@@ -3,6 +3,8 @@ project(eclang VERSION 0.1.0 LANGUAGES C CXX)
 
 add_library(${PROJECT_NAME} STATIC
     src/base/config/globalConfig.cpp
+    src/classes/vectors.cpp
+    src/base/attribute.cpp
     src/base/class.cpp
     src/base/languageDescriptor.cpp
     src/base/eclangBase.cpp

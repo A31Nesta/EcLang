@@ -1,34 +1,77 @@
 #pragma once
 
+// eclang
+#include "attribute.hpp"
+
+// std
+#include <cstdint>
+#include <string>
+#include <vector>
 namespace eclang::language {
     /**
         A class in EcLang.
         Classes in EcLang are structures with a specific name
-        that can contain attributes. These attributes can be of 
-        the following types:
-
-        - INT8   -> (byte, char, int8, int8_t)
-        - INT16  -> (short, int16, int16_t)
-        - INT32  -> (int, int32, int32_t)
-        - INT64  -> (long, int64, int64_t)
-
-        - UINT8  -> (uint8, uint8_t)
-        - UINT16 -> (uint16, uint16_t)
-        - UINT32 -> (uint32, uint32_t)
-        - UINT64 -> (uint64, uint64_t)
-
-        - FLOAT  -> (float)
-        - DOUBLE -> (double)
-
-        - STRING -> (string)
-        - STR_MD -> (str_md)
-
-        TODO: Proper documentation for data types in EcLang
+        that can contain attributes.
     */
     class Class {
     public:
+        /**
+            Constructs the object with the name of the class
+        */
+        Class(std::string name);
+        
+        /**
+            Takes an Attribute object and registers it into the Class
+        */
+        void registerAttribute(Attribute attribute);
+        /**
+            Takes the name and type of a new attribute, creates it and
+            registers it into the Class
+        */
+        void registerAttribute(std::string name, type::Type type);
+
+        /**
+            Returns the name of the Class
+        */
+        std::string getName();
+        /**
+            Returns the names of all registered attributes
+        */
+        std::vector<std::string> getAttributes();
+        /**
+            Returns true if the ID corresponds to a registered attribute.
+        */
+        bool attributeExists(uint32_t id);
+        /**
+            Returns true if the attribute name corresponds to a registered attribute
+        */
+        bool attributeExists(std::string attribute);
+        /**
+            Takes the ID of an attribute as its input and returns
+            the name of the attribute
+        */
+        std::string getAttributeName(uint32_t id);
+        /**
+            Takes the name of an attribute as its input and returns
+            the ID of the attribute
+        */
+        uint32_t getAttributeID(std::string attribute);
+        /**
+            Takes the name of an attribute as its input and returns
+            the data type of the attribute
+        */
+        type::Type getAttributeType(std::string attribute);
+        /**
+            Takes the ID of an attribute as its input and returns
+            the data type of the attribute
+        */
+        type::Type getAttributeType(uint32_t id);
 
     private:
-
+        // Class name
+        std::string name;
+        // List of attributes
+        std::vector<Attribute> attributes;
+        std::vector<std::string> attributesStr;
     };
 }

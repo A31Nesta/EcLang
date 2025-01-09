@@ -74,7 +74,7 @@ namespace eclang {
         void saveToFileSource(std::string fileWithoutExtension = "");
 
         /**
-            TODO: Get data from the tree
+            TODO: Get data from the tree (construct "Object" objects, populate "Attribute" objects...)
         */
 
     private:
