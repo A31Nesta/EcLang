@@ -1,7 +1,6 @@
 #pragma once
 
 // eclang
-#include "base/attribute.hpp"
 #include "class.hpp"
 
 // std

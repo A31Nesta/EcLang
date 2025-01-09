@@ -1,6 +1,4 @@
-#include "class.hpp"
-// eclang
-#include "attribute.hpp"
+#include "classes/class.hpp"
 // std
 #include <algorithm>
 #include <cstdint>

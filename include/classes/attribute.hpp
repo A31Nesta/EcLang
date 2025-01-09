@@ -1,7 +1,7 @@
 #pragma once
 
 // eclang
-#include "classes/vectors.hpp"
+#include "vectors.hpp"
 // std
 #include <cstdint>
 #include <string>

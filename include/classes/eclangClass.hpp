@@ -16,7 +16,7 @@ namespace eclang {
         For the EcLang class available to the user of this library check
         the EcLang class.
     */
-    class EcLangBase {
+    class EcLang {
     public:
         /**
             Constructs an EcLang object from the path to the file.
@@ -27,7 +27,7 @@ namespace eclang {
             for that language must be created and registered before loading the
             file
         */
-        EcLangBase(std::string filepath);
+        EcLang(std::string filepath);
         /**
             Constructs an EcLang object from raw data that corresponds to the
             contents of a source or compiled EcLang file.
@@ -38,7 +38,7 @@ namespace eclang {
             for that language must be created and registered before loading the
             file
         */
-        EcLangBase(void* data, size_t size);
+        EcLang(void* data, size_t size);
         
         /**
             Saves the compiled/decompiled file.
