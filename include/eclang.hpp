@@ -12,3 +12,5 @@
     -----------------------------------------
     By A31Nesta
 */
+
+#include "classes/eclangClass.hpp"

@@ -25,6 +25,22 @@ namespace eclang {
         // Save bytes
         this->identifierBytes = identifierBytes;
     }
+    /**
+        Language constructor with the name of the language and the file extensions.
+        It also contains the first bytes of the file. They are used to identify the language
+        when reading a compiled file. If any of the inputted bytes is 0 an exception is thrown.
+
+        This version allows you to put classes directly, creating the entire language object in one single file
+    */
+    Language::Language(std::string name, std::string sourceFileExtension, std::string compiledFileExtension, std::vector<uint8_t> identifierBytes, std::vector<Class> classes)
+    : Language(name, sourceFileExtension, compiledFileExtension, identifierBytes) {
+        // Add Class array
+        this->classes = classes;
+        // Populate Class String Array
+        for (Class c : classes) {
+            classesStr.push_back(c.getName());
+        }
+    }
 
     // Get language data
     // -----------------

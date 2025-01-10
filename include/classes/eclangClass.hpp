@@ -3,6 +3,7 @@
 // eclang
 #include "language.hpp"
 // std
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -79,6 +80,13 @@ namespace eclang {
 
     private:
         /**
+            For both constructors, a void* of data and a size are obtained
+            and passed to this function. This function figures out the type of
+            the file (language, binary/source...) and compiles the file if it's
+            a source file.
+        */
+        void initializeEcLang(void* dataRaw, size_t size);
+        /**
             Takes the source file (string) as input and returns a vector of uint8_t
             containing the compiled file.
             A Language is required in order to interpret the file and compile it.
@@ -91,15 +99,18 @@ namespace eclang {
             decompiled source code.
             A Language is required in order to interpret the compiled file.
 
-            This method is called during initialization if the file is a compiled file.
-            If this method fails to execute, the program can still continue to run. Errors
-            can happen if the Language used for compilation is not the same as the
+            This method is called when calling saveToFileSource().
+            If this method fails to execute, an exception will be thrown.
+            Errors can happen if the Language used for compilation is not the same as the
             one used for decompilation (for example due to updates to the language)
         */
         std::string decompile(std::vector<uint8_t> compiled, Language* language);
 
         // The name of this file without the extension
         std::string name;
+        // Determined during initialization. It indicates whether or not the file
+        // was a source file or a compiled file.
+        bool fileWasSource;
 
         // Language currently being used.
         // Obtained by the configuration once the EcLang object

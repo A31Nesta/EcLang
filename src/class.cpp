@@ -1,4 +1,5 @@
 #include "classes/class.hpp"
+#include "classes/attribute.hpp"
 // std
 #include <algorithm>
 #include <cstdint>
@@ -9,6 +10,14 @@
 namespace eclang {
     Class::Class(std::string name) {
         this->name = name;
+    }
+    Class::Class(std::string name, std::vector<Attribute> attributes) {
+        this->name = name;
+        this->attributes = attributes;
+        // Populate attributesStr array
+        for (Attribute a : attributes) {
+            attributesStr.push_back(a.getName());
+        }
     }
         
     void Class::registerAttribute(Attribute attribute) {

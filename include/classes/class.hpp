@@ -13,7 +13,7 @@ namespace eclang {
         Classes in EcLang are structures with a specific name
         that can contain attributes.
 
-        This class is used for creating languages (Language Descriptors)
+        This class is used for creating Languages
     */
     class Class {
     public:
@@ -21,6 +21,13 @@ namespace eclang {
             Constructs the object with the name of the class
         */
         Class(std::string name);
+        /**
+            Constructs the object with the name of the class.
+
+            This one also takes in an attributes vector to allow creating the full
+            class object with just the constructor.
+        */
+        Class(std::string name, std::vector<Attribute> attributes);
         
         /**
             Takes an Attribute object and registers it into the Class
