@@ -1,7 +1,7 @@
 #pragma once
 
 // eclang
-#include "languageDescriptor.hpp"
+#include "language.hpp"
 // std
 #include <cstdint>
 #include <string>
@@ -23,7 +23,7 @@ namespace eclang {
             The Language (AUII, NEA, Other...) will be automatically
             detected.
 
-            For languages other than AUII and NEA, a Language Descriptor
+            For languages other than AUII and NEA, a Language object
             for that language must be created and registered before loading the
             file
         */
@@ -34,7 +34,7 @@ namespace eclang {
             The Language (AUII, NEA, Other...) will be automatically
             detected.
 
-            For languages other than AUII and NEA, a Language Descriptor
+            For languages other than AUII and NEA, a Language object
             for that language must be created and registered before loading the
             file
         */
@@ -81,30 +81,30 @@ namespace eclang {
         /**
             Takes the source file (string) as input and returns a vector of uint8_t
             containing the compiled file.
-            A language descriptor is required in order to interpret the file and compile it.
+            A Language is required in order to interpret the file and compile it.
 
             This method is called during initialization if the file is a source file.
         */
-        std::vector<uint8_t> compile(std::string source, language::LanguageDescriptor* language);
+        std::vector<uint8_t> compile(std::string source, Language* language);
         /**
             Takes the compiled file (binary) as input and returns a string containing the
             decompiled source code.
-            A language descriptor is required in order to interpret the compiled file.
+            A Language is required in order to interpret the compiled file.
 
             This method is called during initialization if the file is a compiled file.
             If this method fails to execute, the program can still continue to run. Errors
-            can happen if the language descriptor used for compilation is not the same as the
+            can happen if the Language used for compilation is not the same as the
             one used for decompilation (for example due to updates to the language)
         */
-        std::string decompile(std::vector<uint8_t> compiled, language::LanguageDescriptor* language);
+        std::string decompile(std::vector<uint8_t> compiled, Language* language);
 
         // The name of this file without the extension
         std::string name;
 
-        // Language Descriptor currently being used.
+        // Language currently being used.
         // Obtained by the configuration once the EcLang object
         // figures out the language being used in the loaded file
-        language::LanguageDescriptor* languageDescriptor;
+        Language* language;
 
         // Source code for the current file.
         // This value can be obtained from the user or from decompilation

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <iostream>
 
-namespace eclang::language {
+namespace eclang {
     // CONSTRUCTORS
     // ------------
 

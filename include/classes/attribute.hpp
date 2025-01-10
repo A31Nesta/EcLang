@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string>
 
-namespace eclang::language {
+namespace eclang {
     namespace type {
         /**
             All possible types in EcLang

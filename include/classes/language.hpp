@@ -8,24 +8,24 @@
 #include <string>
 #include <vector>
 
-namespace eclang::language {
+namespace eclang {
     /**
         Information that allows an EcLang object to understand
         how a custom EcLang file (compiled or not) should be interpreted
         and/or compiled.
 
-        Manual creation of Language Descriptors is only necessary for
+        Manual creation of Language objects is only necessary for
         files that are not AUII or NEA as these types have predefined
-        Language Descriptors
+        Language objects
     */
-    class LanguageDescriptor {
+    class Language {
     public:
         /**
-            Language Descriptor Constructor with the name of the language and the file extensions.
+            Language constructor with the name of the language and the file extensions.
             It also contains the first bytes of the file. They are used to identify the language
             when reading a compiled file. If any of the inputted bytes is 0 an exception is thrown
         */
-        LanguageDescriptor(std::string name, std::string sourceFileExtension, std::string compiledFileExtension, std::vector<uint8_t> identifierBytes);
+        Language(std::string name, std::string sourceFileExtension, std::string compiledFileExtension, std::vector<uint8_t> identifierBytes);
 
         // Get language data
         // -----------------

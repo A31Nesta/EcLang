@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace eclang::language {
+namespace eclang {
     Class::Class(std::string name) {
         this->name = name;
     }

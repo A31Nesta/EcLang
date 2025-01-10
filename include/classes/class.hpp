@@ -7,11 +7,13 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-namespace eclang::language {
+namespace eclang {
     /**
         A class in EcLang.
         Classes in EcLang are structures with a specific name
         that can contain attributes.
+
+        This class is used for creating languages (Language Descriptors)
     */
     class Class {
     public:
