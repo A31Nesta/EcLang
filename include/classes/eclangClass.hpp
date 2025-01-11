@@ -1,6 +1,7 @@
 #pragma once
 
 // eclang
+#include "classes/object.hpp"
 #include "language.hpp"
 // std
 #include <cstddef>
@@ -23,10 +24,6 @@ namespace eclang {
             Constructs an EcLang object from the path to the file.
             The Language (AUII, NEA, Other...) will be automatically
             detected.
-
-            For languages other than AUII and NEA, a Language object
-            for that language must be created and registered before loading the
-            file
         */
         EcLang(std::string filepath);
         /**
@@ -35,11 +32,10 @@ namespace eclang {
             The Language (AUII, NEA, Other...) will be automatically
             detected.
 
-            For languages other than AUII and NEA, a Language object
-            for that language must be created and registered before loading the
-            file
+            The name must not contain an extension and will be used during
+            file export if no name is specified
         */
-        EcLang(void* data, size_t size);
+        EcLang(std::string name, void* data, size_t size);
         
         /**
             Saves the compiled/decompiled file.
@@ -75,8 +71,10 @@ namespace eclang {
         void saveToFileSource(std::string fileWithoutExtension = "");
 
         /**
-            TODO: Get data from the tree (construct "Object" objects, populate "Attribute" objects...)
+            Returns the Object objects from the current file as a vector.
+            The Objects allow us to access all the data with a simple interface
         */
+        std::vector<Object> getAllObjects();
 
     private:
         /**
@@ -84,27 +82,35 @@ namespace eclang {
             and passed to this function. This function figures out the type of
             the file (language, binary/source...) and compiles the file if it's
             a source file.
+
+            Throws a runtime error if the language can't be determined.
         */
         void initializeEcLang(void* dataRaw, size_t size);
         /**
+            Constructs all the Object objects by parsing a source file.
+        */
+        void constructFromSource(std::string source);
+        /**
+            Constructs all the Object objects by reading a binary file.
+        */
+        void constructFromBinary(std::vector<uint8_t> compiled);
+        /**
             Takes the source file (string) as input and returns a vector of uint8_t
             containing the compiled file.
-            A Language is required in order to interpret the file and compile it.
 
-            This method is called during initialization if the file is a source file.
+            This method is called when calling saveToFileCompiled() if the file is a source file.
         */
-        std::vector<uint8_t> compile(std::string source, Language* language);
+        std::vector<uint8_t> compile(std::string source);
         /**
             Takes the compiled file (binary) as input and returns a string containing the
             decompiled source code.
-            A Language is required in order to interpret the compiled file.
 
             This method is called when calling saveToFileSource().
             If this method fails to execute, an exception will be thrown.
             Errors can happen if the Language used for compilation is not the same as the
             one used for decompilation (for example due to updates to the language)
         */
-        std::string decompile(std::vector<uint8_t> compiled, Language* language);
+        std::string decompile(std::vector<uint8_t> compiled);
 
         // The name of this file without the extension
         std::string name;
@@ -123,5 +129,10 @@ namespace eclang {
         // Compiled code for the current file.
         // This value can be obtained from the user or from compilation
         std::vector<uint8_t> compiled;
+
+        // All the objects obtained from parsing/reading source/binary file.
+        // Unlike the Classes used to create Languages, these Objects' attributes
+        // contain actual data that we can read with `object.get<DataType>Of(attribute);`
+        std::vector<Object> objects;
     };
 }

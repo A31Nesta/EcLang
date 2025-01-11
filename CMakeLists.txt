@@ -5,12 +5,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(eclang VERSION 0.1.0 LANGUAGES C CXX)
 
+# TODO: Set to off later lmao
+option(ENABLE_LOGGING "Enables logging to stdout for debugging purposes. Should be off unless you're debugging the library" ON)
 
 add_library(${PROJECT_NAME} STATIC
-    src/config/globalConfig.cpp
-    src/vectors.cpp
+    src/util/globalConfig.cpp
+    src/util/stringUtils.cpp
     src/attribute.cpp
     src/class.cpp
+    src/object.cpp
     src/language.cpp
     src/eclangClass.cpp
 )
@@ -18,6 +21,12 @@ add_library(${PROJECT_NAME} STATIC
 set_target_properties(${PROJECT_NAME} PROPERTIES
     POSITION_INDEPENDENT_CODE TRUE
 )
+
+# Define ECLANG_DEBUG
+if(ENABLE_LOGGING)
+    add_compile_definitions(ECLANG_DEBUG)
+endif(ENABLE_LOGGING)
+
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     include
@@ -29,15 +38,21 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 project(eclang-test VERSION 0.1.0 LANGUAGES C CXX)
 
 add_executable(${PROJECT_NAME}
-    src/config/globalConfig.cpp
-    src/vectors.cpp
+    src/util/globalConfig.cpp
+    src/util/stringUtils.cpp
     src/attribute.cpp
     src/class.cpp
+    src/object.cpp
     src/language.cpp
     src/eclangClass.cpp
 
     testEntry.cpp
 )
+
+# Define ECLANG_DEBUG
+if(ENABLE_LOGGING)
+    add_compile_definitions(ECLANG_DEBUG)
+endif(ENABLE_LOGGING)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     include

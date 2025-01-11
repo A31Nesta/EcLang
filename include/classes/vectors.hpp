@@ -11,9 +11,18 @@ namespace eclang {
         template<class numType>
         class vec2_t {
         public:
-            vec2_t();
-            vec2_t(numType xy);
-            vec2_t(numType x, numType y);
+            vec2_t() {
+                x = 0;
+                y = 0;
+            }
+            vec2_t(numType xy) {
+                x = xy;
+                y = xy;
+            }
+            vec2_t(numType x, numType y) {
+                this->x = x;
+                this->y = y;
+            }
 
             numType x;
             numType y;
@@ -24,9 +33,21 @@ namespace eclang {
         template<class numType>
         class vec3_t {
         public:
-            vec3_t();
-            vec3_t(numType xyz);
-            vec3_t(numType x, numType y, numType z);
+            vec3_t() {
+                x = 0;
+                y = 0;
+                z = 0;
+            }
+            vec3_t(numType xyz) {
+                x = xyz;
+                y = xyz;
+                z = xyz;
+            }
+            vec3_t(numType x, numType y, numType z) {
+                this->x = x;
+                this->y = y;
+                this->z = z;
+            }
 
             numType x;
             numType y;
@@ -38,9 +59,24 @@ namespace eclang {
         template<class numType>
         class vec4_t {
         public:
-            vec4_t();
-            vec4_t(numType xyzw);
-            vec4_t(numType x, numType y, numType z, numType w);
+            vec4_t() {
+                x = 0;
+                y = 0;
+                z = 0;
+                w = 0;
+            }
+            vec4_t(numType xyzw) {
+                x = xyzw;
+                y = xyzw;
+                z = xyzw;
+                w = xyzw;
+            }
+            vec4_t(numType x, numType y, numType z, numType w) {
+                this->x = x;
+                this->y = y;
+                this->z = z;
+                this->w = w;
+            }
 
             numType x;
             numType y;
