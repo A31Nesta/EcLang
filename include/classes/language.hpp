@@ -4,9 +4,12 @@
 #include "class.hpp"
 
 // std
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
+
+#define ECLANG_KEYWORD_COUNT 5
 
 namespace eclang {
     /**
@@ -55,6 +58,11 @@ namespace eclang {
             They are used to identify the language of a compiled EcLang file.
         */
         std::vector<uint8_t> getIdentifierBytes();
+
+        /**
+            Returns a list of keywords. This is constant and used for all languages
+        */
+        static const std::array<std::string, ECLANG_KEYWORD_COUNT> getKeywords() { return keywords; }
 
         // Register Classes
         // ----------------
@@ -149,5 +157,15 @@ namespace eclang {
         // data types.
         std::vector<Class> classes;
         std::vector<std::string> classesStr;
+
+        // Constant array of keywords that affect all languages
+        // `#language` is not here because it's not analyzed by the lexer
+        static inline const std::array<std::string, ECLANG_KEYWORD_COUNT> keywords {
+            "#include",
+            "#include-dyn",
+            "#template",
+            "#template-dyn",
+            "#register"
+        };
     };
 }

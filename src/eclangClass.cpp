@@ -2,6 +2,7 @@
 // eclang
 #include "classes/language.hpp"
 #include "util/globalConfig.hpp"
+#include "util/lexer.hpp"
 #include "util/stringUtils.hpp"
 // std
 #include <cstddef>
@@ -13,6 +14,65 @@
 #include <vector>
 
 namespace eclang {
+    // Other
+    #ifdef ECLANG_DEBUG
+    void debugLexer(std::vector<lexer::Token> tokens) {
+        std::cout << "ECLANG_LOG: Debugging lexer...\n";
+        for (lexer::Token t : tokens) {
+            // Set color depending on the token type
+            switch (t.type) {
+            case lexer::type::SCOPE_ENTER:
+            case lexer::type::SCOPE_EXIT:
+                std::cout << "\033[38;5;33m"; // blue
+                break;
+            case lexer::type::ASSIGNMENT:
+                std::cout << "\033[38;5;195m"; // light blue
+                break;
+            case lexer::type::PARENTHESIS_OPEN:
+            case lexer::type::PARENTHESIS_CLOSE:
+                std::cout << "\033[38;5;141m"; // violet
+                break;
+            case lexer::type::COMMA:
+                std::cout << "\033[38;5;225m"; // light pink
+                break;
+            case lexer::type::SEMICOLON:
+                std::cout << "\033[38;5;192m"; // light green
+                break;
+            case lexer::type::KEYWORD:
+                std::cout << "\033[38;5;92m"; // darker purple, similar to vscode
+                break;
+            case lexer::type::CLASS:
+                std::cout << "\033[38;5;42m"; // Green, similar to vscode
+                break;
+            case lexer::type::ATTRIBUTE:
+            case lexer::type::IDENTIFIER:
+                std::cout << "\033[38;5;45m"; // blue, similar to vscode
+                break;
+            case lexer::type::NUMBER:
+                std::cout << "\033[38;5;230m"; // very light yellow
+                break;
+            case lexer::type::STRING:
+                std::cout << "\033[38;5;215m"; // orange, similar to vscode
+                break;
+            case lexer::type::STRING_MD:
+                std::cout << "\033[38;5;209m"; // more red-ish orange
+                break;
+            case lexer::type::INVALID:
+            case lexer::type::IGNORED:
+                std::cout << "\033[48;5;160m"; // RED BACKGROUND!!
+                break;
+            }
+
+            // Print
+            std::cout << t.string;
+
+            // Reset color
+            std::cout << "\033[0m ";
+        }
+        std::cout << "\nECLANG_LOG: Done!\n";
+    }
+    #endif
+
     // PUBLIC
     // ------
 
@@ -240,7 +300,13 @@ namespace eclang {
         Constructs all the Object objects by parsing a source file.
     */
     void EcLang::constructFromSource(std::string source) {
-        // TODO: Implement parsing source file
+        source = source.substr(source.find_first_of('\n')+1); // remove #language tag
+        std::vector<lexer::Token> tokens = lexer::tokenizeSource(source, language);
+        
+        #ifdef ECLANG_DEBUG
+        // Print entire lexical analysis
+        debugLexer(tokens);
+        #endif
     }
     /**
         Constructs all the Object objects by reading a binary file.

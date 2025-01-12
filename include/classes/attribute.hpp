@@ -28,19 +28,19 @@ namespace eclang {
             DOUBLE, // -> (double)
 
             STRING, // -> (string)
-            STR_MD, // -> (str_md) // a string that should be
+            STR_MD, // -> (str_md) // a string that should be interpreted as Markdown
 
-            VEC2I,  // -> (vec2i) // a vector of two signed 3
-            VEC3I,  // -> (vec3i) // a vector of three signed
-            VEC4I,  // -> (vec4i) // a vector of four signed 
+            VEC2I,  // -> (vec2i) // a vector of two signed 32 bit integers
+            VEC3I,  // -> (vec3i) // a vector of three signed 32 bit integers
+            VEC4I,  // -> (vec4i) // a vector of four signed 32 bit integers
 
-            VEC2L,  // -> (vec2l) // a vector of two signed 6
-            VEC3L,  // -> (vec3l) // a vector of three signed
-            VEC4L,  // -> (vec4l) // a vector of four signed 
+            VEC2L,  // -> (vec2l) // a vector of two signed 64 bit integers
+            VEC3L,  // -> (vec3l) // a vector of three signed 64 bit integers
+            VEC4L,  // -> (vec4l) // a vector of four signed 64 bit integers
 
-            VEC2F,  // -> (vec2, vec2f) // a vector of two fl
-            VEC3F,  // -> (vec3, vec3f) // a vector of three 
-            VEC4F,  // -> (vec4, vec4f) // a vector of four f
+            VEC2F,  // -> (vec2, vec2f) // a vector of two floats
+            VEC3F,  // -> (vec3, vec3f) // a vector of three floats
+            VEC4F,  // -> (vec4, vec4f) // a vector of four floats
 
             VEC2D,  // -> (vec2d) // a vector of two doubles
             VEC3D,  // -> (vec3d) // a vector of three double

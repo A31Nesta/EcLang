@@ -11,6 +11,7 @@ option(ENABLE_LOGGING "Enables logging to stdout for debugging purposes. Should 
 add_library(${PROJECT_NAME} STATIC
     src/util/globalConfig.cpp
     src/util/stringUtils.cpp
+    src/util/lexer.cpp
     src/attribute.cpp
     src/class.cpp
     src/object.cpp
@@ -40,6 +41,7 @@ project(eclang-test VERSION 0.1.0 LANGUAGES C CXX)
 add_executable(${PROJECT_NAME}
     src/util/globalConfig.cpp
     src/util/stringUtils.cpp
+    src/util/lexer.cpp
     src/attribute.cpp
     src/class.cpp
     src/object.cpp
