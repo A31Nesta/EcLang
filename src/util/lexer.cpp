@@ -59,7 +59,7 @@ namespace eclang::lexer {
         Token t;
         t.string = source.substr(lexemeStart, charReading - lexemeStart);
 
-        // check for CLASSes or KEYWORDs
+        // check for CLASSes
         // We don't check for ATTRIBUTEs as they're context dependent.
         // The ATTRIBUTE Type is unused
         std::vector<std::string> classes = language->getClasses();
@@ -70,7 +70,20 @@ namespace eclang::lexer {
                 return t;
             }
         }
-        // Check for keywords...
+        // Ok... it's an identifier
+        t.type = type::IDENTIFIER;
+        return t;
+    }
+    Token readKeyword() {
+        advance(); // This ensures that we take the '#' even if it's not alphanumeric
+        // We also allow the usage of '-' because kebab case is allowed in keywords
+        while (isAlphanumeric(peek()) || peek() == '-') advance();
+
+        // create token with no line or column, we just want the string and type
+        Token t;
+        t.string = source.substr(lexemeStart, charReading - lexemeStart);
+
+        // check for KEYWORDs
         const std::array<std::string, ECLANG_KEYWORD_COUNT> keywords = Language::getKeywords();
         for (std::string keyword : keywords) {
             if (t.string == keyword) {
@@ -78,8 +91,8 @@ namespace eclang::lexer {
                 return t;
             }
         }
-        // Ok... it's an identifier
-        t.type = type::IDENTIFIER;
+        // whoops, invalid keyword
+        t.type = type::INVALID;
         return t;
     }
     Token readNumericToken() {
@@ -240,11 +253,20 @@ namespace eclang::lexer {
             }break;
 
         default:
-            // keyword, class, attribute or identifier
+            // class or identifier
             if (isAlpha(c)) {
                 Token t2 = readAlphanumericToken();
                 t.type = t2.type;
                 t.string = t2.string;
+            }
+            // keyword
+            else if (c == '#') {
+                Token t2 = readKeyword();
+                t.type = t2.type;
+                t.string = t2.string;
+                if (t.type == type::INVALID) {
+                    std::cerr << "ECLANG_ERROR: Invalid keyword \""+t.string+"\" in column "+std::to_string(column)+" of line "+std::to_string(line)+".\n";
+                }
             }
             // Number (with or without symbol)
             else if (isDigit(c) || c == '-' || c == '+') {
