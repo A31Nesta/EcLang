@@ -11,6 +11,7 @@
 #include <ios>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace eclang {
@@ -72,6 +73,27 @@ namespace eclang {
         std::cout << "\nECLANG_LOG: Done!\n";
     }
     #endif
+
+    // Compilation Instructions
+    namespace instruction {
+        enum Type {
+            // keywords
+            INCLUDE,
+            INCLUDE_DYN,
+            TEMPLATE,
+            TEMPLATE_DYN,
+            REGISTER,
+            // object interaction
+            OBJECT_CREATE,
+            CUSTOM_OBJECT_CREATE,
+            ATTRIBUTE_SET,
+            CUSTOM_ATTRIBUTE_SET,
+            ENTER_SCOPE, // Go to the latest node created. Guaranteed to only occur after creating an Object.
+            EXIT_SCOPE, // Go to the parent node of the current one.
+
+            COUNT
+        };
+    }
 
     // PUBLIC
     // ------
@@ -307,11 +329,109 @@ namespace eclang {
         // Print entire lexical analysis
         debugLexer(tokens);
         #endif
+
+        // Parsing:
+        // This part is context dependent, each iteration of the loop is an "instruction" or a group of instructions:
+        // (assignment and object creation are instructions, object creation followed by entering scope is a group of instructions)
+        bool hasErrors = false;
+        for (size_t current = 0; current < tokens.size(); current++) {
+            const lexer::Token& t = tokens.at(current);
+            switch (t.type) {
+            case lexer::type::KEYWORD: {
+                // INCLUDE
+                if (t.string == "#include") {
+                    const lexer::Token& file = tokens.at(current+1); // This should be a String
+                    if (file.type != lexer::type::STRING) {
+                        std::cerr << "ECLANG_ERROR: Unexpected token \""+file.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". String was expected\n";
+                        break;
+                    }
+                    // TODO: Create child EcLang and append its contents to our contents
+                } 
+                // INCLUDE-DYN
+                else if (t.string == "#include-dyn") {
+                    const lexer::Token& file = tokens.at(current+1); // This should be a String
+                    if (file.type != lexer::type::STRING) {
+                        std::cerr << "ECLANG_ERROR: Unexpected token \""+file.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". String was expected\n";
+                        break;
+                    }
+                    // TODO: Create child EcLang and append its contents to our contents
+                    // THIS VERSION SHOULD STORE THE PATH TO THE FILE! WE CANNOT COMPILE THE FILE DIRECTLY
+                }
+                // TEMPLATE
+                else if (t.string == "#template") {
+                    const lexer::Token& file = tokens.at(current+1); // This should be a String
+                    if (file.type == lexer::type::STRING) {
+                        // TODO: Create child EcLang and append our contents to the specified file's template node
+                    }
+                    // If there's no string afterwards we set this node as template node
+                    else {
+                        // TODO: Set as Template Node
+                    }
+                }
+                // TEMPLATE-DYN
+                else if (t.string == "#template-dyn") {
+                    const lexer::Token& file = tokens.at(current+1); // This should be a String
+                    if (file.type != lexer::type::STRING) {
+                        std::cerr << "ECLANG_ERROR: Unexpected token \""+t.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". String was expected\n";
+                        break;
+                    }
+                    // TODO: Create child EcLang and append our contents to the specified file's template node
+                }
+                // REGISTER
+                else if (t.string == "#register") {
+                    const lexer::Token& alias = tokens.at(current+1); // This should be a String
+                    const lexer::Token& file = tokens.at(current+2); // This should also be a String
+                    if (alias.type != lexer::type::STRING) {
+                        std::cerr << "ECLANG_ERROR: Unexpected token \""+alias.string+"\" at column "+std::to_string(alias.column)+" at line "+std::to_string(alias.line)+". Usage: #register <alias:Sring> <path:String>\n";
+                        break;
+                    }
+                    if (file.type != lexer::type::STRING) {
+                        std::cerr << "ECLANG_ERROR: Unexpected token \""+file.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". Usage: #register <alias:Sring> <path:String>\n";
+                        break;
+                    }
+                    // TODO: Add specified file into a map with aliases for files
+                }
+            }break;
+            case lexer::type::CLASS: {
+                // CLASS should be followed by IDENTIFIER and optionally SCOPE_ENTER.
+                // If SCOPE_ENTER is ommited we should have a SEMICOLON.
+                // Either way, we need 2 arguments
+                const lexer::Token& identifier = tokens.at(current+1);
+                const lexer::Token& terminator = tokens.at(current+2); // again, semicolon or enter scope
+                if (identifier.type != lexer::type::IDENTIFIER) {
+                    std::cerr << "ECLANG_ERROR: Unexpected token \""+identifier.string+"\" at column "+std::to_string(identifier.column)+" at line "+std::to_string(identifier.line)+". Usage: <Class> <Identifier>; or <Class> <Identifier> {}\n";
+                    break;
+                }
+                if (terminator.type == lexer::type::SEMICOLON) {
+                    // TODO: Create object and NOT make this node the new scope.
+                }
+                else if (terminator.type == lexer::type::SCOPE_ENTER) {
+                    // TODO: Create object and make this node the new scope.
+                }
+                else {
+                    std::cerr << "ECLANG_ERROR: Unexpected token \""+terminator.string+"\" at column "+std::to_string(terminator.column)+" at line "+std::to_string(terminator.line)+". Semicolon or curly braces were expected after Node declaration.\n";
+                }
+            }break;
+            case lexer::type::IDENTIFIER:
+                // This is where things get complex
+                parseIdentifier();
+            default:
+                // Everything that does not start an instruction goes through here.
+                // If something is not starting an instruction then it shouldn't be here.
+                hasErrors = true;
+                std::cerr << "ECLANG_ERROR: Unexpected token \""+t.string+"\" at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+".\n";
+                break;
+            }
+        }
     }
     /**
         Constructs all the Object objects by reading a binary file.
     */
     void EcLang::constructFromBinary(std::vector<uint8_t> compiled) {
         // TODO: Implement reading binary file
+    }
+
+    void EcLang::parseIdentifier() {
+        // TODO: Implement this monstruous function
     }
 }

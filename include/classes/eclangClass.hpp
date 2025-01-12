@@ -95,6 +95,27 @@ namespace eclang {
         */
         void constructFromBinary(std::vector<uint8_t> compiled);
         /**
+            Helper function. Given an array of Tokens, and the current index of the token
+            corresponding to an IDENTIFIER, return an instruction or set of instructions.
+
+            To determine the instructions, this function does the following (T is True, F is False):
+
+            1. Check if it's an attribute
+                T: This is an assignation; check:
+                    1. The type of the Attribute
+                    2. The type of the next Token (ASSIGNATION)
+                    3. The type of the next Token (NUMBER, STRING, STRING_MD, IDENTIFIER)
+                        - For assigning to vector types, check the following:
+                            1. That the tokens after ASSIGNATION are {IDENTIFIER, PARENTHESIS_OPEN, NUMBER, COMMA, NUMBER, COMMA, NUMBER, PARENTHESIS_CLOSE}
+                            2. That the IDENTIFIER is a vector of the type that we expect (Attribute type)
+                    4. That the last token (after we get all the data) is SEMICOLON.
+                F: This may be a custom attribute, check:
+                    1. This structure of tokens: {ASSIGNATION, STRING, SEMICOLON}
+                    
+        */
+        void parseIdentifier();
+
+        /**
             Takes the source file (string) as input and returns a vector of uint8_t
             containing the compiled file.
 
