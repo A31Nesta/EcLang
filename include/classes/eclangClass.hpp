@@ -94,6 +94,7 @@ namespace eclang {
             Constructs all the Object objects by reading a binary file.
         */
         void constructFromBinary(std::vector<uint8_t> compiled);
+
         /**
             Helper function. Given an array of Tokens, and the current index of the token
             corresponding to an IDENTIFIER, return an instruction or set of instructions.
@@ -106,12 +107,20 @@ namespace eclang {
                     2. The type of the next Token (ASSIGNATION)
                     3. The type of the next Token (NUMBER, STRING, STRING_MD, IDENTIFIER)
                         - For assigning to vector types, check the following:
-                            1. That the tokens after ASSIGNATION are {IDENTIFIER, PARENTHESIS_OPEN, NUMBER, COMMA, NUMBER, COMMA, NUMBER, PARENTHESIS_CLOSE}
+                            1. That the tokens after ASSIGNATION are {IDENTIFIER, PARENTHESIS_OPEN, NUMBER, COMMA, NUMBER, COMMA, NUMBER, PARENTHESIS_CLOSE} (number of numbers and commas may vary. vec3 was assumed in the example)
                             2. That the IDENTIFIER is a vector of the type that we expect (Attribute type)
                     4. That the last token (after we get all the data) is SEMICOLON.
-                F: This may be a custom attribute, check:
-                    1. This structure of tokens: {ASSIGNATION, STRING, SEMICOLON}
-                    
+                    5. Instruction should be ATTRIBUTE_SET
+
+                F: This may be a custom attribute.
+                    1. Check for this structure of tokens: {ASSIGNATION, STRING, SEMICOLON}
+                        T: Instruction should be CUSTOM_ATTRIBUTE_SET
+
+                        F: This may be a custom Class.
+                            1. Check for this structure of tokens {IDENTIFIER, SEMICOLON} or this one {IDENTIFIER, ENTER_SCOPE}
+                                T: Instruction should be CUSTOM_CLASS_SET
+
+                                F: Throw Error (Unexpected identifier)
         */
         void parseIdentifier();
 
