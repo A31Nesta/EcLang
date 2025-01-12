@@ -7,17 +7,27 @@
 
 namespace eclang {
     /**
-        Don't call this manually. This object should be obtained from the EcLang class.
-
-        Constructs the Object object with the class name, the object's name and all
-        the attributes. The attributes MUST contain data and are guaranteed to contain
-        data if obtained from an EcLang object.
+        Constructs the Object object with the class name and the object's name
     */
-    Object::Object(std::string className, std::string name, std::vector<Attribute> attributes) {
+    Object::Object(std::string className, std::string name) {
         // Copy data to object
         this->className = className;
         this->name = name;
-        this->attributes = attributes;
+    }
+
+    /**
+        Adds an attribute. This attribute must contain data.
+        Do not call this manually.
+    */
+    void Object::_addAttribute(Attribute a) {
+        attributes.push_back(a);
+    }
+    /**
+        Adds an Object object as a child of this object.
+        Do not call this manually.
+    */
+    void Object::_addChild(Object o) {
+        children.push_back(o);
     }
 
     /**
@@ -31,6 +41,14 @@ namespace eclang {
     */
     std::string Object::getClassName() {
         return className;
+    }
+
+    /**
+        Returns all children of this object.
+        The vector may be empty
+    */
+    std::vector<Object> Object::getChildren() {
+        return children;
     }
 
     /**
