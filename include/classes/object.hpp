@@ -16,7 +16,7 @@ namespace eclang {
 
         Example:
         --------------------------------------------------------------
-        1 | uint8_t attribute = object.getIDOf("exampleAttribute");   |
+        1 | uint8_t attribute = object->getIDOf("exampleAttribute");  |
         2 |                                                           |
         3 | // Check if attribute is set/exists                       |
         4 | if (attribute == -1) {                                    |
@@ -24,8 +24,8 @@ namespace eclang {
         6 | }                                                         |
         7 |                                                           |
         8 | // Check type of attribute                                |
-        9 | if (object.getTypeOf(attribute) == eclang::type::FLOAT) { |
-        10|     float value = object.getFloatOf(attribute);           |
+        9 | if (object->getTypeOf(attribute) == eclang::type::FLOAT) {|
+        10|     float value = object->getFloatOf(attribute);          |
         11|     // Do something...                                    |
         12| }                                                         |
         --------------------------------------------------------------
@@ -50,7 +50,7 @@ namespace eclang {
             Adds an Object object as a child of this object.
             Do not call this manually.
         */
-        void _addChild(Object o);
+        void _addChild(Object* o);
 
         /**
             Returns the name of the object
@@ -69,7 +69,7 @@ namespace eclang {
             Returns all children of this object.
             The vector may be empty
         */
-        std::vector<Object> getChildren();
+        std::vector<Object*> getChildren();
 
         /**
             Returns the ID of the attribute.
@@ -127,6 +127,6 @@ namespace eclang {
         std::string name; // This object's name
         std::string className; // The class' name
         std::vector<Attribute*> attributes; // List of attributes (with data)
-        std::vector<Object> children; // List of other objects
+        std::vector<Object*> children; // List of other objects
     };
 }

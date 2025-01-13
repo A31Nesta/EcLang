@@ -36,6 +36,10 @@ namespace eclang {
             file export if no name is specified
         */
         EcLang(std::string name, void* data, size_t size);
+        /**
+            Guess what it does
+        */
+        ~EcLang();
         
         /**
             Saves the compiled/decompiled file.
@@ -131,13 +135,14 @@ namespace eclang {
         // This value can be obtained from the user or from compilation
         std::vector<uint8_t> compiled;
 
-        // All the objects obtained from parsing/reading source/binary file.
-        // Unlike the Classes used to create Languages, these Objects' attributes
+        // All the objects obtained from parsing/reading source/binary file that
+        // are in the root (and not inside another node (object))
         // contain actual data that we can read with `object.get<DataType>Of(attribute);`
         std::vector<Object*> objects;
         // While reading, objects are created and stored in the `objects` array.
         // When we enter scope, we add the last object in the `objects` array here.
         // When we exit scope, we remove the last object in this array.
+        // WE DO NOT DELETE ANYTHING IN THIS ARRAY. THESE ARE REFERENCES
         std::vector<Object*> scope;
     };
 }

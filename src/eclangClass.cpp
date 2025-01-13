@@ -75,6 +75,21 @@ namespace eclang {
         }
         std::cout << "\nECLANG_LOG: Done!\n";
     }
+    void debugObjectsRecursive(std::vector<Object*> objects, uint8_t indentationLv = 0) {
+        std::string indentationStr = "";
+        for (uint8_t i = 0; i < indentationLv; i++) {
+            indentationStr += "\t";
+        }
+        for (Object* o : objects) {
+            std::vector<Object*> children = o->getChildren();
+            std::cout << 
+                indentationStr + "N_CHILDREN: " << children.size() << "\n" <<
+                indentationStr + "CLASS_NAME: " << o->getClassName() << "\n" <<
+                indentationStr + "OBJCT_NAME: " << o->getName() << "\n";
+            
+            debugObjectsRecursive(children, indentationLv++);
+        }
+    }
     #endif
 
     // Compilation Instructions
@@ -522,6 +537,14 @@ namespace eclang {
         this->name = name;
         initializeEcLang(data, size);
     }
+    /**
+        Guess what it does
+    */
+    EcLang::~EcLang() {
+        for (Object* o : objects) {
+            delete o;
+        }
+    }
     
     /**
         Saves the compiled/decompiled file.
@@ -781,13 +804,25 @@ namespace eclang {
                 }
                 if (terminator.type == lexer::type::SEMICOLON) {
                     Object* o = new Object(t.string, identifier.string);
-                    objects.push_back(o);
+                    // Only add to `objects` if the scope is empty
+                    // If not, we add it to the latest object in the scope
+                    if (scope.empty()) {
+                        objects.push_back(o);
+                    } else {
+                        scope.at(scope.size()-1)->_addChild(o);
+                    }
                 }
                 else if (terminator.type == lexer::type::SCOPE_ENTER) {
                     Object* o = new Object(t.string, identifier.string);
-                    objects.push_back(o);
+                    // Only add to `objects` if the scope is empty
+                    // If not, we add it to the latest object in the scope
+                    if (scope.empty()) {
+                        objects.push_back(o);
+                    } else {
+                        scope.at(scope.size()-1)->_addChild(o);
+                    }
                     // Add to scope
-                    scope.push_back(objects.at(objects.size()-1));
+                    scope.push_back(o);
                 }
                 else {
                     std::cerr << "ECLANG_ERROR: Unexpected token \""+terminator.string+"\" at column "+std::to_string(terminator.column)+" at line "+std::to_string(terminator.line)+". Semicolon or curly braces were expected after Node declaration.\n";
@@ -821,12 +856,10 @@ namespace eclang {
             }
         }
 
-        // DEBUG
-        std::cout << "ECLANG_LOG: Size of Objects Array: "+std::to_string(objects.size())+"\n";
-        for (Object* o : objects) {
-            delete o;
-        }
-        std::cout << "ECLANG_LOG: Deleted Objects\n";
+        #ifdef ECLANG_DEBUG
+        // Prints the tree and some info
+        debugObjectsRecursive(objects);
+        #endif
     }
     /**
         Constructs all the Object objects by reading a binary file.

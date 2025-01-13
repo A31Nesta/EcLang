@@ -22,6 +22,10 @@ namespace eclang {
         for (Attribute* a : attributes) {
             delete a;
         }
+        // It's recursin' time!
+        for (Object* o : children) {
+            delete o;
+        }
     }
 
     /**
@@ -35,7 +39,7 @@ namespace eclang {
         Adds an Object object as a child of this object.
         Do not call this manually.
     */
-    void Object::_addChild(Object o) {
+    void Object::_addChild(Object* o) {
         children.push_back(o);
     }
 
@@ -56,7 +60,7 @@ namespace eclang {
         Returns all children of this object.
         The vector may be empty
     */
-    std::vector<Object> Object::getChildren() {
+    std::vector<Object*> Object::getChildren() {
         return children;
     }
     /**
