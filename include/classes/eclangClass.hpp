@@ -96,35 +96,6 @@ namespace eclang {
         void constructFromBinary(std::vector<uint8_t> compiled);
 
         /**
-            Helper function. Given an array of Tokens, and the current index of the token
-            corresponding to an IDENTIFIER, return an instruction or set of instructions.
-
-            To determine the instructions, this function does the following (T is True, F is False):
-
-            1. Check if it's an attribute
-                T: This is an assignation; check:
-                    1. The type of the Attribute
-                    2. The type of the next Token (ASSIGNATION)
-                    3. The type of the next Token (NUMBER, STRING, STRING_MD, IDENTIFIER)
-                        - For assigning to vector types, check the following:
-                            1. That the tokens after ASSIGNATION are {IDENTIFIER, PARENTHESIS_OPEN, NUMBER, COMMA, NUMBER, COMMA, NUMBER, PARENTHESIS_CLOSE} (number of numbers and commas may vary. vec3 was assumed in the example)
-                            2. That the IDENTIFIER is a vector of the type that we expect (Attribute type)
-                    4. That the last token (after we get all the data) is SEMICOLON.
-                    5. Instruction should be ATTRIBUTE_SET
-
-                F: This may be a custom attribute.
-                    1. Check for this structure of tokens: {ASSIGNATION, STRING, SEMICOLON}
-                        T: Instruction should be CUSTOM_ATTRIBUTE_SET
-
-                        F: This may be a custom Class.
-                            1. Check for this structure of tokens {IDENTIFIER, SEMICOLON} or this one {IDENTIFIER, ENTER_SCOPE}
-                                T: Instruction should be CUSTOM_CLASS_SET
-
-                                F: Throw Error (Unexpected identifier)
-        */
-        void parseIdentifier();
-
-        /**
             Takes the source file (string) as input and returns a vector of uint8_t
             containing the compiled file.
 
@@ -164,5 +135,9 @@ namespace eclang {
         // Unlike the Classes used to create Languages, these Objects' attributes
         // contain actual data that we can read with `object.get<DataType>Of(attribute);`
         std::vector<Object> objects;
+        // While reading, objects are created and stored in the `objects` array.
+        // When we enter scope, we add the last object in the `objects` array here.
+        // When we exit scope, we remove the last object in this array.
+        std::vector<Object*> scope;
     };
 }

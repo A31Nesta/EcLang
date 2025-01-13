@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace eclang {
     /**
@@ -49,6 +50,16 @@ namespace eclang {
     */
     std::vector<Object> Object::getChildren() {
         return children;
+    }
+    /**
+        Returns the names of all registered attributes
+    */
+    std::vector<std::string> Object::getAttributes() {
+        std::vector<std::string> attributesStr;
+        for (Attribute a : attributes) {
+            attributesStr.push_back(a.getName());
+        }
+        return attributesStr;
     }
 
     /**

@@ -124,6 +124,18 @@ namespace eclang {
     // Attributes from classes
     // -----------------------
     /**
+        Takes the ID of the Class and returns all attributes
+    */
+    std::vector<std::string> Language::getAttributes(uint32_t classID) {
+        return classes.at(classID).getAttributes();
+    }
+    /**
+        Takes the name of the Class and returns all attributes
+    */
+    std::vector<std::string> Language::getAttributes(std::string className) {
+        return classes.at(getClassID(className)).getAttributes();
+    }
+    /**
         Takes the ID of the class and the ID of an attribute
         and returns the name of the attribute
     */

@@ -56,6 +56,10 @@ namespace eclang {
             Returns the name of the class.
         */
         std::string getClassName();
+        /**
+            Returns the names of all registered attributes
+        */
+        std::vector<std::string> getAttributes();
 
         /**
             Returns all children of this object.

@@ -197,7 +197,7 @@ namespace eclang::lexer {
             t.string = c;
             break;
         case '=':
-            t.type = type::ASSIGNMENT;
+            t.type = type::ASSIGN;
             t.string = c;
             break;
         case '(':

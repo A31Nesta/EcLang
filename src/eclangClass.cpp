@@ -1,6 +1,8 @@
 #include "classes/eclangClass.hpp"
 // eclang
+#include "classes/attribute.hpp"
 #include "classes/language.hpp"
+#include "classes/object.hpp"
 #include "util/globalConfig.hpp"
 #include "util/lexer.hpp"
 #include "util/stringUtils.hpp"
@@ -26,7 +28,7 @@ namespace eclang {
             case lexer::type::SCOPE_EXIT:
                 std::cout << "\033[38;5;33m"; // blue
                 break;
-            case lexer::type::ASSIGNMENT:
+            case lexer::type::ASSIGN:
                 std::cout << "\033[38;5;195m"; // light blue
                 break;
             case lexer::type::PARENTHESIS_OPEN:
@@ -93,6 +95,292 @@ namespace eclang {
 
             COUNT
         };
+    }
+
+    /**
+        We assume that this is a number assignation. This function sets the current attribute with the value
+        obtained from the text file (object) into the current Object
+    */
+    size_t parseNumberAssignment(std::vector<lexer::Token> tokens, size_t currentIndex, type::Type attributeType, Object& currentScope) {
+        const lexer::Token& t = tokens.at(currentIndex);
+        const lexer::Token& value = tokens.at(currentIndex+2); // We skip the equals because we know it's there
+        const lexer::Token& semicolon = tokens.at(currentIndex+3);
+
+        if (value.type != lexer::type::NUMBER) {
+            throw std::runtime_error("ECLANG_ERROR: Invalid assignment at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Number was expected for Attribute \""+t.string+"\".");
+        }
+        // Is the next token SEMICOLON?
+        if (semicolon.type != lexer::type::SEMICOLON) {
+            throw std::runtime_error("ECLANG_ERROR: Invalid token at column "+std::to_string(semicolon.column)+" at line "+std::to_string(semicolon.line)+". Semicolon was expected.");
+        }
+
+        // Now, do assignation for every number type
+        // TODO: Assignation code for every number type
+        switch (attributeType) {
+        case type::INT8:
+        case type::INT16:
+        case type::INT32:
+        case type::INT64:
+        case type::UINT8:
+        case type::UINT16:
+        case type::UINT32:
+        case type::UINT64:
+        case type::FLOAT:
+        default:
+            throw std::runtime_error("ECLANG_FATAL: Internal error at `parseNumberAssignment()`");
+            break;
+        }
+
+        return 3; // We always take three: {ASSIGN, NUMBER, SEMICOLON}
+    }
+    /**
+        We assume that this is a vector assignation. This function sets the current attribute with the value
+        obtained from the text file (vector) into the current Object
+    */
+    size_t parseVectorAssignment(std::vector<lexer::Token> tokens, size_t currentIndex, type::Type attributeType, Object& currentScope) {
+        const lexer::Token& t = tokens.at(currentIndex);
+        const lexer::Token& value = tokens.at(currentIndex+2); // must be identifier in the case of vectors
+        if (value.type != lexer::type::IDENTIFIER) {
+            throw std::runtime_error("ECLANG_ERROR: Identifier expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+".");
+        }
+        uint8_t values = 2; // Amount of values in the vector: 2, 3 or 4
+        if (
+            attributeType == type::VEC3D ||
+            attributeType == type::VEC3F ||
+            attributeType == type::VEC3I ||
+            attributeType == type::VEC3L
+        ) {
+            values = 3;
+        } else if (
+            attributeType == type::VEC4D ||
+            attributeType == type::VEC4F ||
+            attributeType == type::VEC4I ||
+            attributeType == type::VEC4L
+        ) {
+            values = 4;
+        }
+        char type = 'f'; // 'f' for FLOAT, 'd' for DOUBLE, 'i' for INT, 'l' for LONG
+        if (
+            attributeType == type::VEC2D ||
+            attributeType == type::VEC3D ||
+            attributeType == type::VEC4D
+        ) {
+            type = 'd';
+        } else if (
+            attributeType == type::VEC2I ||
+            attributeType == type::VEC3I ||
+            attributeType == type::VEC4I
+        ) {
+            type = 'i';
+        } else if (
+            attributeType == type::VEC2L ||
+            attributeType == type::VEC3L ||
+            attributeType == type::VEC4L
+        ) {
+            type = 'l';
+        }
+        
+        // Check tokens depending on amount of values
+        if (values == 2) {
+            // Take 6 Tokens: {PARENTHESIS_OPEN, NUMBER, COMMA, NUMBER, PARENTHESIS_CLOSE, SEMICOLON}
+            const lexer::Token& parOpen = tokens.at(currentIndex+3);
+            const lexer::Token& num1 = tokens.at(currentIndex+4);
+            const lexer::Token& comma = tokens.at(currentIndex+5);
+            const lexer::Token& num2 = tokens.at(currentIndex+6);
+            const lexer::Token& parClose = tokens.at(currentIndex+7);
+            const lexer::Token& semicolon = tokens.at(currentIndex+8);
+
+            // Check things that are not numbers
+            if (parOpen.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parOpen.column)+" at line "+std::to_string(parOpen.line)+".");}
+            if (comma.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma.column)+" at line "+std::to_string(comma.line)+".");}
+            if (parClose.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parClose.column)+" at line "+std::to_string(parClose.line)+".");}
+            if (semicolon.type != lexer::type::SEMICOLON) {throw std::runtime_error("ECLANG_ERROR: Semicolon expected at column "+std::to_string(semicolon.column)+" at line "+std::to_string(semicolon.line)+".");}
+            // Check numbers
+            if (num1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num1.column)+" at line "+std::to_string(num1.line)+".");}
+            if (num2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num2.column)+" at line "+std::to_string(num2.line)+".");}
+
+            // Now we know that everything is correct
+            // TODO: Check type and add Attribute to Object.
+
+            return 8; // We took a total of 8 tokens.
+        } else if (values == 3) {
+            // Take 8 Tokens: {PARENTHESIS_OPEN, NUMBER, COMMA, NUMBER, COMMA, NUMBER, PARENTHESIS_CLOSE, SEMICOLON}
+            const lexer::Token& parOpen = tokens.at(currentIndex+3);
+            const lexer::Token& num1 = tokens.at(currentIndex+4);
+            const lexer::Token& comma1 = tokens.at(currentIndex+5);
+            const lexer::Token& num2 = tokens.at(currentIndex+6);
+            const lexer::Token& comma2 = tokens.at(currentIndex+7);
+            const lexer::Token& num3 = tokens.at(currentIndex+8);
+            const lexer::Token& parClose = tokens.at(currentIndex+9);
+            const lexer::Token& semicolon = tokens.at(currentIndex+10);
+
+            // Check things that are not numbers
+            if (parOpen.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parOpen.column)+" at line "+std::to_string(parOpen.line)+".");}
+            if (parClose.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parClose.column)+" at line "+std::to_string(parClose.line)+".");}
+            if (comma1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma1.column)+" at line "+std::to_string(comma1.line)+".");}
+            if (comma2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma2.column)+" at line "+std::to_string(comma2.line)+".");}
+            if (semicolon.type != lexer::type::SEMICOLON) {throw std::runtime_error("ECLANG_ERROR: Semicolon expected at column "+std::to_string(semicolon.column)+" at line "+std::to_string(semicolon.line)+".");}
+            // Check numbers
+            if (num1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num1.column)+" at line "+std::to_string(num1.line)+".");}
+            if (num2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num2.column)+" at line "+std::to_string(num2.line)+".");}
+            if (num3.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num3.column)+" at line "+std::to_string(num3.line)+".");}
+
+            // Now we know that everything is correct
+            // TODO: Check type and add Attribute to Object.
+
+            return 10; // We took a total of 10 tokens.
+        } else {
+            // Take 10 Tokens: {PARENTHESIS_OPEN, NUMBER, COMMA, NUMBER, COMMA, NUMBER, COMMA, NUMBER, PARENTHESIS_CLOSE, SEMICOLON}
+            const lexer::Token& parOpen = tokens.at(currentIndex+3);
+            const lexer::Token& num1 = tokens.at(currentIndex+4);
+            const lexer::Token& comma1 = tokens.at(currentIndex+5);
+            const lexer::Token& num2 = tokens.at(currentIndex+6);
+            const lexer::Token& comma2 = tokens.at(currentIndex+7);
+            const lexer::Token& num3 = tokens.at(currentIndex+8);
+            const lexer::Token& comma3 = tokens.at(currentIndex+9);
+            const lexer::Token& num4 = tokens.at(currentIndex+10);
+            const lexer::Token& parClose = tokens.at(currentIndex+11);
+            const lexer::Token& semicolon = tokens.at(currentIndex+12);
+
+            // Check things that are not numbers
+            if (parOpen.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parOpen.column)+" at line "+std::to_string(parOpen.line)+".");}
+            if (parClose.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parClose.column)+" at line "+std::to_string(parClose.line)+".");}
+            if (comma1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma1.column)+" at line "+std::to_string(comma1.line)+".");}
+            if (comma2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma2.column)+" at line "+std::to_string(comma2.line)+".");}
+            if (comma3.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma3.column)+" at line "+std::to_string(comma3.line)+".");}
+            if (semicolon.type != lexer::type::SEMICOLON) {throw std::runtime_error("ECLANG_ERROR: Semicolon expected at column "+std::to_string(semicolon.column)+" at line "+std::to_string(semicolon.line)+".");}
+            // Check numbers
+            if (num1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num1.column)+" at line "+std::to_string(num1.line)+".");}
+            if (num2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num2.column)+" at line "+std::to_string(num2.line)+".");}
+            if (num3.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num3.column)+" at line "+std::to_string(num3.line)+".");}
+            if (num4.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num4.column)+" at line "+std::to_string(num4.line)+".");}
+
+            // Now we know that everything is correct
+            // TODO: Check type and add Attribute to Object.
+
+            return 12; // We took a total of 12 tokens.
+        }
+    }
+
+    // I don't want to include the lexer functions in the eclangClass header
+    /**
+        Helper function. Given an array of Tokens, and the current index of the token
+        corresponding to an IDENTIFIER, returns the amount of tokens consumed.
+
+        To determine the instructions, this function does the following (T is True, F is False):
+
+        1. Check if it's an attribute
+            T: This is an assignation; check:
+                1. The type of the Attribute
+                2. The type of the next Token (ASSIGNATION)
+                3. The type of the next Token (NUMBER, STRING, STRING_MD, IDENTIFIER)
+                    - For assigning to vector types, check the following:
+                        1. That the tokens after ASSIGNATION are {IDENTIFIER, PARENTHESIS_OPEN, NUMBER, COMMA, NUMBER, COMMA, NUMBER, PARENTHESIS_CLOSE} (number of numbers and commas may vary. vec3 was assumed in the example)
+                        2. That the IDENTIFIER is a vector of the type that we expect (Attribute type)
+                4. That the last token (after we get all the data) is SEMICOLON.
+                5. Instruction should be ATTRIBUTE_SET
+
+            F: This may be a custom attribute.
+                1. Check for this structure of tokens: {ASSIGNATION, STRING, SEMICOLON}
+                    T: Instruction should be CUSTOM_ATTRIBUTE_SET
+
+                    F: This may be a custom Class.
+                        1. Check for this structure of tokens {IDENTIFIER, SEMICOLON} or this one {IDENTIFIER, ENTER_SCOPE}
+                            T: Instruction should be CUSTOM_CLASS_SET
+
+                            F: Throw Error (Unexpected identifier)
+        
+        Returns the amount of tokens consumed.
+    */
+    size_t parseIdentifier(std::vector<lexer::Token> tokens, size_t currentIndex, Object& currentScope, Language* language) {
+        const lexer::Token& t = tokens.at(currentIndex);
+        if (t.type != lexer::type::IDENTIFIER) throw std::runtime_error("ECLANG_ERROR: Called parseIdentifier() on a token that was not an identifier at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+".");
+
+        // Is this an attribute?
+        // Check for attribute of the current class
+        std::vector<std::string> attributes = language->getAttributes(currentScope.getClassName());
+        bool isAttribute = false;
+        for (std::string attribute : attributes) {
+            if (attribute == t.string) {
+                isAttribute = true;
+                break;
+            }
+        }
+
+        // If this IS an attribute this SHOULD be an assignation; check.
+        if (isAttribute) {
+            // Get next 2 tokens
+            const lexer::Token& assignation = tokens.at(currentIndex+1);
+            const lexer::Token& value = tokens.at(currentIndex+2); // can be a literal or an identifier in the case of vectors
+            // Check for assignation sign, if not found we have an error.
+            if (assignation.type != lexer::type::ASSIGN) {
+                throw std::runtime_error("ECLANG_ERROR: Invalid token at column "+std::to_string(assignation.column)+" at line "+std::to_string(assignation.line)+". Equals was expected.");
+            }
+
+            // INFO: This could be optimized by using the numerical IDs instead of comparing Strings
+            type::Type attributeType = language->getAttributeType(currentScope.getClassName(), t.string);
+            switch (attributeType) {
+            // NUMBERS
+            case type::INT8:
+            case type::INT16:
+            case type::INT32:
+            case type::INT64:
+            case type::UINT8:
+            case type::UINT16:
+            case type::UINT32:
+            case type::UINT64:
+            case type::FLOAT:
+            case type::DOUBLE:
+                return parseNumberAssignment(tokens, currentIndex, attributeType, currentScope);
+                break;
+            // STRINGS
+            case type::STRING: {
+            if (value.type != lexer::type::STRING) {
+                    throw std::runtime_error("ECLANG_ERROR: Invalid assignment at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+". String was expected for Attribute \""+t.string+"\".");
+                }
+                // Is the next token SEMICOLON?
+                const lexer::Token& semicolon = tokens.at(currentIndex+3);
+                if (semicolon.type != lexer::type::SEMICOLON) {
+                    throw std::runtime_error("ECLANG_ERROR: Invalid token at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+". Semicolon was expected.");
+                }
+                // TODO: Add a new attribute to the current scope with this value
+                return 3; // We consumed a total of 3 tokens: ASSIGN, STRING and SEMICOLON
+            } break;
+            case type::STR_MD: {
+            if (value.type != lexer::type::STRING_MD) {
+                    throw std::runtime_error("ECLANG_ERROR: Invalid assignment at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+". Markdown String was expected for Attribute \""+t.string+"\".");
+                }
+                // Is the next token SEMICOLON?
+                const lexer::Token& semicolon = tokens.at(currentIndex+3);
+                if (semicolon.type != lexer::type::SEMICOLON) {
+                    throw std::runtime_error("ECLANG_ERROR: Invalid token at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+". Semicolon was expected.");
+                }
+                // TODO: Add a new attribute to the current scope with this value
+                return 3; // We consumed a total of 3 tokens: ASSIGN, STRING_MD and SEMICOLON
+            } break;
+            // VECTORS
+            case type::VEC2I:
+            case type::VEC3I:
+            case type::VEC4I:
+            case type::VEC2L:
+            case type::VEC3L:
+            case type::VEC4L:
+            case type::VEC2F:
+            case type::VEC3F:
+            case type::VEC4F:
+            case type::VEC2D:
+            case type::VEC3D:
+            case type::VEC4D:
+                return parseVectorAssignment(tokens, currentIndex, attributeType, currentScope);
+                break;
+            }
+
+            // If for whatever reason we didn't return earlier we return now.
+            return 0;
+        }
+
+        // If this is NOT an attribute continue
+        return 0;
     }
 
     // PUBLIC
@@ -346,6 +634,9 @@ namespace eclang {
                         break;
                     }
                     // TODO: Create child EcLang and append its contents to our contents
+
+                    // Update current
+                    current += 1;
                 } 
                 // INCLUDE-DYN
                 else if (t.string == "#include-dyn") {
@@ -362,6 +653,9 @@ namespace eclang {
                     const lexer::Token& file = tokens.at(current+1); // This should be a String
                     if (file.type == lexer::type::STRING) {
                         // TODO: Create child EcLang and append our contents to the specified file's template node
+
+                        // Update current
+                        current += 1;
                     }
                     // If there's no string afterwards we set this node as template node
                     else {
@@ -376,6 +670,9 @@ namespace eclang {
                         break;
                     }
                     // TODO: Create child EcLang and append our contents to the specified file's template node
+
+                    // Update current
+                    current += 1;
                 }
                 // REGISTER
                 else if (t.string == "#register") {
@@ -390,6 +687,9 @@ namespace eclang {
                         break;
                     }
                     // TODO: Add specified file into a map with aliases for files
+
+                    // Update current
+                    current += 2;
                 }
             }break;
             case lexer::type::CLASS: {
@@ -411,10 +711,17 @@ namespace eclang {
                 else {
                     std::cerr << "ECLANG_ERROR: Unexpected token \""+terminator.string+"\" at column "+std::to_string(terminator.column)+" at line "+std::to_string(terminator.line)+". Semicolon or curly braces were expected after Node declaration.\n";
                 }
+                // Update current
+                current += 2;
             }break;
-            case lexer::type::IDENTIFIER:
+            case lexer::type::IDENTIFIER: {
                 // This is where things get complex
-                parseIdentifier();
+                // TODO: Create scope and pass current node (Object) to parseIdentifier
+                Object o{"a","a"};
+                parseIdentifier(tokens, current, o, language);
+            } break;
+            case lexer::type::SCOPE_EXIT:
+                // TODO: Set the parent node as current
             default:
                 // Everything that does not start an instruction goes through here.
                 // If something is not starting an instruction then it shouldn't be here.
@@ -429,9 +736,5 @@ namespace eclang {
     */
     void EcLang::constructFromBinary(std::vector<uint8_t> compiled) {
         // TODO: Implement reading binary file
-    }
-
-    void EcLang::parseIdentifier() {
-        // TODO: Implement this monstruous function
     }
 }

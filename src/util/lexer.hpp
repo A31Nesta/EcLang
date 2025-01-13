@@ -15,7 +15,7 @@ namespace eclang::lexer {
             // Single character
             SCOPE_ENTER, // {
             SCOPE_EXIT, // }
-            ASSIGNMENT, // =
+            ASSIGN, // =
             PARENTHESIS_OPEN, // (
             PARENTHESIS_CLOSE, // )
             COMMA, // ,
