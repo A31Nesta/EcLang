@@ -84,10 +84,11 @@ namespace eclang {
             std::vector<Object*> children = o->getChildren();
             std::cout << 
                 indentationStr + "N_CHILDREN: " << children.size() << "\n" <<
+                indentationStr + "N_ATTRIBUT: " << o->getAttributes().size() << "\n" <<
                 indentationStr + "CLASS_NAME: " << o->getClassName() << "\n" <<
-                indentationStr + "OBJCT_NAME: " << o->getName() << "\n";
+                indentationStr + "OBJCT_NAME: " << o->getName() << "\n\n";
             
-            debugObjectsRecursive(children, indentationLv++);
+            debugObjectsRecursive(children, indentationLv+1);
         }
     }
     #endif
@@ -541,6 +542,8 @@ namespace eclang {
         Guess what it does
     */
     EcLang::~EcLang() {
+        // We should only delete our objects if this file was not included by another file
+        if (isIncluded) { return; }
         for (Object* o : objects) {
             delete o;
         }
@@ -583,6 +586,17 @@ namespace eclang {
         The Objects allow us to access all the data with a simple interface
     */
     std::vector<Object*> EcLang::getAllObjects() {
+        return objects;
+    }
+    // FOR USE IN ANOTHER ECLANG (Private, moved up here to keep it close to getAllObjects)
+    /**
+        Returns the Object objects from the current file as a vector.
+        This function marks this object as "included", which effectively
+        transfers the ownership of the objects to the object calling this
+        function (the parent node during inclusion)
+    */
+    std::vector<Object*> EcLang::_getAllObjectsAsInclude() {
+        isIncluded = true;
         return objects;
     }
 
@@ -732,7 +746,18 @@ namespace eclang {
                         std::cerr << "ECLANG_ERROR: Unexpected token \""+file.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". String was expected\n";
                         break;
                     }
-                    // TODO: Create child EcLang and append its contents to our contents
+                    // Create child EcLang and append its contents to our contents
+                    #ifdef ECLANG_DEBUG
+                    std::cout << "ECLANG_LOG: Statically including file: "+file.string+"\n";
+                    #endif
+                    EcLang includedEcLang(file.string);
+                    std::vector<Object*> children = includedEcLang._getAllObjectsAsInclude();
+                    // Add to current object in scope OR simply add to root
+                    if (scope.empty()) {
+                        objects.insert(objects.end(), children.begin(), children.end());
+                    } else {
+                        scope.at(scope.size()-1)->_addChildren(children);
+                    }
 
                     // Update current
                     current += 1;
@@ -858,7 +883,9 @@ namespace eclang {
 
         #ifdef ECLANG_DEBUG
         // Prints the tree and some info
+        std::cout << "-------------------------------------------------\n";
         debugObjectsRecursive(objects);
+        std::cout << "-------------------------------------------------\n";
         #endif
     }
     /**

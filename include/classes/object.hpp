@@ -51,6 +51,11 @@ namespace eclang {
             Do not call this manually.
         */
         void _addChild(Object* o);
+        /**
+            Adds an array of Objects as children of this object.
+            Do not call this manually.
+        */
+        void _addChildren(std::vector<Object*> o);
 
         /**
             Returns the name of the object

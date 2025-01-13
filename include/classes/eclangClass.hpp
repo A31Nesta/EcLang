@@ -117,6 +117,15 @@ namespace eclang {
         */
         std::string decompile(std::vector<uint8_t> compiled);
 
+        // FOR USE IN ANOTHER ECLANG
+        /**
+            Returns the Object objects from the current file as a vector.
+            This function marks this object as "included", which effectively
+            transfers the ownership of the objects to the object calling this
+            function (the parent node during inclusion)
+        */
+        std::vector<Object*> _getAllObjectsAsInclude();
+
         // The name of this file without the extension
         std::string name;
         // Determined during initialization. It indicates whether or not the file
@@ -144,5 +153,9 @@ namespace eclang {
         // When we exit scope, we remove the last object in this array.
         // WE DO NOT DELETE ANYTHING IN THIS ARRAY. THESE ARE REFERENCES
         std::vector<Object*> scope;
+        // Has a (possible) parent EcLang obtained this object's Objects?
+        // If this is the case, even if this EcLang instance is deleted we
+        // don't want to delete our Objects
+        bool isIncluded = false;
     };
 }
