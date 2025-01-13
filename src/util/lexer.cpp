@@ -156,7 +156,14 @@ namespace eclang::lexer {
         // If our next character is a dot and there are more numbers afterwards we take it and continue reading
         if (!isEOF() && peek() == '*') {
             // We advance until we find "*/"
-            while (!isEOF() && (peek() != '*' || peekNext() != '/')) advance();
+            while (!isEOF() && (peek() != '*' || peekNext() != '/')) {
+                // newlines
+                if (peek() == '\n') {
+                    line++;
+                    column = 0;
+                }
+                advance();
+            }
             // Check that the comment was properly terminated
             if (isEOF()) {
                 std::cerr << "ECLANG_ERROR: Unterminated comment starting from column "+std::to_string(column)+" of line "+std::to_string(line)+".\n";
@@ -299,7 +306,7 @@ namespace eclang::lexer {
         source = sourceCode;
         lexemeStart = 0;
         charReading = 0;
-        line = 0;
+        line = 2; // Line starts at 2 because we ignore the #language tag
         column = 0;
 
         // read char by char
