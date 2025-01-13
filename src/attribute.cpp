@@ -205,7 +205,7 @@ namespace eclang {
                 break;
             case type::STRING:
             case type::STR_MD:
-                delete (std::string*)bytesValue;
+                // delete (std::string*)bytesValue; // NOT USING NEW!!!
                 break;
             case type::VEC2I:
                 delete (vec2i*)bytesValue;

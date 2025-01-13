@@ -3,6 +3,7 @@
 #include "classes/attribute.hpp"
 #include "classes/language.hpp"
 #include "classes/object.hpp"
+#include "classes/vectors.hpp"
 #include "util/globalConfig.hpp"
 #include "util/lexer.hpp"
 #include "util/stringUtils.hpp"
@@ -101,7 +102,7 @@ namespace eclang {
         We assume that this is a number assignation. This function sets the current attribute with the value
         obtained from the text file (object) into the current Object
     */
-    size_t parseNumberAssignment(std::vector<lexer::Token> tokens, size_t currentIndex, type::Type attributeType, Object& currentScope) {
+    size_t parseNumberAssignment(std::vector<lexer::Token> tokens, size_t currentIndex, type::Type attributeType, Object* currentScope) {
         const lexer::Token& t = tokens.at(currentIndex);
         const lexer::Token& value = tokens.at(currentIndex+2); // We skip the equals because we know it's there
         const lexer::Token& semicolon = tokens.at(currentIndex+3);
@@ -115,17 +116,37 @@ namespace eclang {
         }
 
         // Now, do assignation for every number type
-        // TODO: Assignation code for every number type
         switch (attributeType) {
         case type::INT8:
+            currentScope->_addAttribute(new Attribute(t.string, int8_t(std::stoi(value.string))));
+            break;
         case type::INT16:
+            currentScope->_addAttribute(new Attribute(t.string, int16_t(std::stoi(value.string))));
+            break;
         case type::INT32:
+            currentScope->_addAttribute(new Attribute(t.string, int32_t(std::stoi(value.string))));
+            break;
         case type::INT64:
+            currentScope->_addAttribute(new Attribute(t.string, int64_t(std::stol(value.string))));
+            break;
         case type::UINT8:
+            currentScope->_addAttribute(new Attribute(t.string, uint8_t(std::stoi(value.string))));
+            break;
         case type::UINT16:
+            currentScope->_addAttribute(new Attribute(t.string, uint16_t(std::stoi(value.string))));
+            break;
         case type::UINT32:
+            currentScope->_addAttribute(new Attribute(t.string, uint32_t(std::stoul(value.string))));
+            break;
         case type::UINT64:
+            currentScope->_addAttribute(new Attribute(t.string, uint64_t(std::stoul(value.string))));
+            break;
         case type::FLOAT:
+            currentScope->_addAttribute(new Attribute(t.string, std::stof(value.string)));
+            break;
+        case type::DOUBLE:
+            currentScope->_addAttribute(new Attribute(t.string, std::stod(value.string)));
+            break;
         default:
             throw std::runtime_error("ECLANG_FATAL: Internal error at `parseNumberAssignment()`");
             break;
@@ -137,7 +158,7 @@ namespace eclang {
         We assume that this is a vector assignation. This function sets the current attribute with the value
         obtained from the text file (vector) into the current Object
     */
-    size_t parseVectorAssignment(std::vector<lexer::Token> tokens, size_t currentIndex, type::Type attributeType, Object& currentScope) {
+    size_t parseVectorAssignment(std::vector<lexer::Token> tokens, size_t currentIndex, type::Type attributeType, Object* currentScope) {
         const lexer::Token& t = tokens.at(currentIndex);
         const lexer::Token& value = tokens.at(currentIndex+2); // must be identifier in the case of vectors
         if (value.type != lexer::type::IDENTIFIER) {
@@ -192,15 +213,31 @@ namespace eclang {
 
             // Check things that are not numbers
             if (parOpen.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parOpen.column)+" at line "+std::to_string(parOpen.line)+".");}
-            if (comma.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma.column)+" at line "+std::to_string(comma.line)+".");}
-            if (parClose.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parClose.column)+" at line "+std::to_string(parClose.line)+".");}
+            if (parClose.type != lexer::type::PARENTHESIS_CLOSE) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parClose.column)+" at line "+std::to_string(parClose.line)+".");}
+            if (comma.type != lexer::type::COMMA) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma.column)+" at line "+std::to_string(comma.line)+".");}
             if (semicolon.type != lexer::type::SEMICOLON) {throw std::runtime_error("ECLANG_ERROR: Semicolon expected at column "+std::to_string(semicolon.column)+" at line "+std::to_string(semicolon.line)+".");}
             // Check numbers
-            if (num1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num1.column)+" at line "+std::to_string(num1.line)+".");}
-            if (num2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num2.column)+" at line "+std::to_string(num2.line)+".");}
+            if (num1.type != lexer::type::NUMBER) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num1.column)+" at line "+std::to_string(num1.line)+".");}
+            if (num2.type != lexer::type::NUMBER) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num2.column)+" at line "+std::to_string(num2.line)+".");}
 
             // Now we know that everything is correct
-            // TODO: Check type and add Attribute to Object.
+            // Last checks and add to current object
+            if (type == 'f') {
+                if (!(value.string == "vec2" || value.string == "vec2f")) {throw std::runtime_error("ECLANG_ERROR: 'vec2' or 'vec2f' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec2f(std::stof(num1.string), std::stof(num2.string))));
+            }
+            else if (type == 'd') {
+                if (value.string != "vec2d") {throw std::runtime_error("ECLANG_ERROR: 'vec2d' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec2d(std::stod(num1.string), std::stod(num2.string))));
+            }
+            else if (type == 'i') {
+                if (value.string != "vec2i") {throw std::runtime_error("ECLANG_ERROR: 'vec2i' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec2i(std::stoi(num1.string), std::stoi(num2.string))));
+            }
+            else if (type == 'l') {
+                if (value.string != "vec2l") {throw std::runtime_error("ECLANG_ERROR: 'vec2l' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec2l(std::stol(num1.string), std::stol(num2.string))));
+            }
 
             return 8; // We took a total of 8 tokens.
         } else if (values == 3) {
@@ -216,17 +253,33 @@ namespace eclang {
 
             // Check things that are not numbers
             if (parOpen.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parOpen.column)+" at line "+std::to_string(parOpen.line)+".");}
-            if (parClose.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parClose.column)+" at line "+std::to_string(parClose.line)+".");}
-            if (comma1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma1.column)+" at line "+std::to_string(comma1.line)+".");}
-            if (comma2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma2.column)+" at line "+std::to_string(comma2.line)+".");}
+            if (parClose.type != lexer::type::PARENTHESIS_CLOSE) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parClose.column)+" at line "+std::to_string(parClose.line)+".");}
+            if (comma1.type != lexer::type::COMMA) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma1.column)+" at line "+std::to_string(comma1.line)+".");}
+            if (comma2.type != lexer::type::COMMA) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma2.column)+" at line "+std::to_string(comma2.line)+".");}
             if (semicolon.type != lexer::type::SEMICOLON) {throw std::runtime_error("ECLANG_ERROR: Semicolon expected at column "+std::to_string(semicolon.column)+" at line "+std::to_string(semicolon.line)+".");}
             // Check numbers
-            if (num1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num1.column)+" at line "+std::to_string(num1.line)+".");}
-            if (num2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num2.column)+" at line "+std::to_string(num2.line)+".");}
-            if (num3.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num3.column)+" at line "+std::to_string(num3.line)+".");}
+            if (num1.type != lexer::type::NUMBER) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num1.column)+" at line "+std::to_string(num1.line)+".");}
+            if (num2.type != lexer::type::NUMBER) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num2.column)+" at line "+std::to_string(num2.line)+".");}
+            if (num3.type != lexer::type::NUMBER) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num3.column)+" at line "+std::to_string(num3.line)+".");}
 
             // Now we know that everything is correct
-            // TODO: Check type and add Attribute to Object.
+            // Last checks and add to current object
+            if (type == 'f') {
+                if (!(value.string == "vec3" || value.string == "vec3f")) {throw std::runtime_error("ECLANG_ERROR: 'vec3' or 'vec3f' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec3f(std::stof(num1.string), std::stof(num2.string), std::stof(num3.string))));
+            }
+            else if (type == 'd') {
+                if (value.string != "vec3d") {throw std::runtime_error("ECLANG_ERROR: 'vec3d' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec3d(std::stod(num1.string), std::stod(num2.string), std::stod(num3.string))));
+            }
+            else if (type == 'i') {
+                if (value.string != "vec3i") {throw std::runtime_error("ECLANG_ERROR: 'vec3i' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec3i(std::stoi(num1.string), std::stoi(num2.string), std::stoi(num3.string))));
+            }
+            else if (type == 'l') {
+                if (value.string != "vec3l") {throw std::runtime_error("ECLANG_ERROR: 'vec3l' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec3l(std::stol(num1.string), std::stol(num2.string), std::stol(num3.string))));
+            }
 
             return 10; // We took a total of 10 tokens.
         } else {
@@ -244,19 +297,35 @@ namespace eclang {
 
             // Check things that are not numbers
             if (parOpen.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parOpen.column)+" at line "+std::to_string(parOpen.line)+".");}
-            if (parClose.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parClose.column)+" at line "+std::to_string(parClose.line)+".");}
-            if (comma1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma1.column)+" at line "+std::to_string(comma1.line)+".");}
-            if (comma2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma2.column)+" at line "+std::to_string(comma2.line)+".");}
-            if (comma3.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma3.column)+" at line "+std::to_string(comma3.line)+".");}
+            if (parClose.type != lexer::type::PARENTHESIS_CLOSE) {throw std::runtime_error("ECLANG_ERROR: Parenthesis expected at column "+std::to_string(parClose.column)+" at line "+std::to_string(parClose.line)+".");}
+            if (comma1.type != lexer::type::COMMA) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma1.column)+" at line "+std::to_string(comma1.line)+".");}
+            if (comma2.type != lexer::type::COMMA) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma2.column)+" at line "+std::to_string(comma2.line)+".");}
+            if (comma3.type != lexer::type::COMMA) {throw std::runtime_error("ECLANG_ERROR: Comma expected at column "+std::to_string(comma3.column)+" at line "+std::to_string(comma3.line)+".");}
             if (semicolon.type != lexer::type::SEMICOLON) {throw std::runtime_error("ECLANG_ERROR: Semicolon expected at column "+std::to_string(semicolon.column)+" at line "+std::to_string(semicolon.line)+".");}
             // Check numbers
-            if (num1.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num1.column)+" at line "+std::to_string(num1.line)+".");}
-            if (num2.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num2.column)+" at line "+std::to_string(num2.line)+".");}
-            if (num3.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num3.column)+" at line "+std::to_string(num3.line)+".");}
-            if (num4.type != lexer::type::PARENTHESIS_OPEN) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num4.column)+" at line "+std::to_string(num4.line)+".");}
+            if (num1.type != lexer::type::NUMBER) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num1.column)+" at line "+std::to_string(num1.line)+".");}
+            if (num2.type != lexer::type::NUMBER) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num2.column)+" at line "+std::to_string(num2.line)+".");}
+            if (num3.type != lexer::type::NUMBER) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num3.column)+" at line "+std::to_string(num3.line)+".");}
+            if (num4.type != lexer::type::NUMBER) {throw std::runtime_error("ECLANG_ERROR: Number expected at column "+std::to_string(num4.column)+" at line "+std::to_string(num4.line)+".");}
 
             // Now we know that everything is correct
-            // TODO: Check type and add Attribute to Object.
+            // Last checks and add to current object
+            if (type == 'f') {
+                if (!(value.string == "vec4" || value.string == "vec4f")) {throw std::runtime_error("ECLANG_ERROR: 'vec4' or 'vec4f' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec4f(std::stof(num1.string), std::stof(num2.string), std::stof(num3.string), std::stof(num4.string))));
+            }
+            else if (type == 'd') {
+                if (value.string != "vec4d") {throw std::runtime_error("ECLANG_ERROR: 'vec4d' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec4d(std::stod(num1.string), std::stod(num2.string), std::stod(num3.string), std::stod(num4.string))));
+            }
+            else if (type == 'i') {
+                if (value.string != "vec4i") {throw std::runtime_error("ECLANG_ERROR: 'vec4i' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec4i(std::stoi(num1.string), std::stoi(num2.string), std::stoi(num3.string), std::stoi(num4.string))));
+            }
+            else if (type == 'l') {
+                if (value.string != "vec4l") {throw std::runtime_error("ECLANG_ERROR: 'vec4l' expected at column "+std::to_string(value.column)+" at line "+std::to_string(value.line)+". Got "+value.string+" instead.");}
+                currentScope->_addAttribute(new Attribute(t.string, vec4l(std::stol(num1.string), std::stol(num2.string), std::stol(num3.string), std::stol(num4.string))));
+            }
 
             return 12; // We took a total of 12 tokens.
         }
@@ -292,13 +361,13 @@ namespace eclang {
         
         Returns the amount of tokens consumed.
     */
-    size_t parseIdentifier(std::vector<lexer::Token> tokens, size_t currentIndex, Object& currentScope, Language* language) {
+    size_t parseIdentifier(std::vector<lexer::Token> tokens, size_t currentIndex, Object* currentScope, Language* language) {
         const lexer::Token& t = tokens.at(currentIndex);
         if (t.type != lexer::type::IDENTIFIER) throw std::runtime_error("ECLANG_ERROR: Called parseIdentifier() on a token that was not an identifier at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+".");
 
         // Is this an attribute?
         // Check for attribute of the current class
-        std::vector<std::string> attributes = language->getAttributes(currentScope.getClassName());
+        std::vector<std::string> attributes = language->getAttributes(currentScope->getClassName());
         bool isAttribute = false;
         for (std::string attribute : attributes) {
             if (attribute == t.string) {
@@ -318,7 +387,7 @@ namespace eclang {
             }
 
             // INFO: This could be optimized by using the numerical IDs instead of comparing Strings
-            type::Type attributeType = language->getAttributeType(currentScope.getClassName(), t.string);
+            type::Type attributeType = language->getAttributeType(currentScope->getClassName(), t.string);
             switch (attributeType) {
             // NUMBERS
             case type::INT8:
@@ -335,7 +404,7 @@ namespace eclang {
                 break;
             // STRINGS
             case type::STRING: {
-            if (value.type != lexer::type::STRING) {
+                if (value.type != lexer::type::STRING) {
                     throw std::runtime_error("ECLANG_ERROR: Invalid assignment at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+". String was expected for Attribute \""+t.string+"\".");
                 }
                 // Is the next token SEMICOLON?
@@ -343,11 +412,13 @@ namespace eclang {
                 if (semicolon.type != lexer::type::SEMICOLON) {
                     throw std::runtime_error("ECLANG_ERROR: Invalid token at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+". Semicolon was expected.");
                 }
-                // TODO: Add a new attribute to the current scope with this value
+                // Create String attribute
+                Attribute* a = new Attribute(t.string, value.string, type::STRING);
+                currentScope->_addAttribute(a);
                 return 3; // We consumed a total of 3 tokens: ASSIGN, STRING and SEMICOLON
             } break;
             case type::STR_MD: {
-            if (value.type != lexer::type::STRING_MD) {
+                if (value.type != lexer::type::STRING_MD) {
                     throw std::runtime_error("ECLANG_ERROR: Invalid assignment at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+". Markdown String was expected for Attribute \""+t.string+"\".");
                 }
                 // Is the next token SEMICOLON?
@@ -355,7 +426,9 @@ namespace eclang {
                 if (semicolon.type != lexer::type::SEMICOLON) {
                     throw std::runtime_error("ECLANG_ERROR: Invalid token at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+". Semicolon was expected.");
                 }
-                // TODO: Add a new attribute to the current scope with this value
+                // Create String attribute
+                Attribute* a = new Attribute(t.string, value.string, type::STR_MD);
+                currentScope->_addAttribute(a);
                 return 3; // We consumed a total of 3 tokens: ASSIGN, STRING_MD and SEMICOLON
             } break;
             // VECTORS
@@ -435,6 +508,9 @@ namespace eclang {
 
         // Initialize EcLang with the raw file data
         initializeEcLang(buffer, length);
+
+        // Delete file buffer
+        delete[] buffer;
     }
     /**
         Constructs an EcLang object from raw data that corresponds to the
@@ -483,7 +559,7 @@ namespace eclang {
         Returns the Object objects from the current file as a vector.
         The Objects allow us to access all the data with a simple interface
     */
-    std::vector<Object> EcLang::getAllObjects() {
+    std::vector<Object*> EcLang::getAllObjects() {
         return objects;
     }
 
@@ -670,6 +746,7 @@ namespace eclang {
                         break;
                     }
                     // TODO: Create child EcLang and append our contents to the specified file's template node
+                    // THIS VERSION SHOULD STORE THE PATH TO THE FILE! WE CANNOT COMPILE THE FILE DIRECTLY
 
                     // Update current
                     current += 1;
@@ -699,14 +776,18 @@ namespace eclang {
                 const lexer::Token& identifier = tokens.at(current+1);
                 const lexer::Token& terminator = tokens.at(current+2); // again, semicolon or enter scope
                 if (identifier.type != lexer::type::IDENTIFIER) {
-                    std::cerr << "ECLANG_ERROR: Unexpected token \""+identifier.string+"\" at column "+std::to_string(identifier.column)+" at line "+std::to_string(identifier.line)+". Usage: <Class> <Identifier>; or <Class> <Identifier> {}\n";
+                    std::cerr << "ECLANG_ERROR: Unexpected token \""+identifier.string+"\" at column "+std::to_string(identifier.column)+" at line "+std::to_string(identifier.line)+". Usage: <Class> <name>; or <Class> <name> {}\n";
                     break;
                 }
                 if (terminator.type == lexer::type::SEMICOLON) {
-                    // TODO: Create object and NOT make this node the new scope.
+                    Object* o = new Object(t.string, identifier.string);
+                    objects.push_back(o);
                 }
                 else if (terminator.type == lexer::type::SCOPE_ENTER) {
-                    // TODO: Create object and make this node the new scope.
+                    Object* o = new Object(t.string, identifier.string);
+                    objects.push_back(o);
+                    // Add to scope
+                    scope.push_back(objects.at(objects.size()-1));
                 }
                 else {
                     std::cerr << "ECLANG_ERROR: Unexpected token \""+terminator.string+"\" at column "+std::to_string(terminator.column)+" at line "+std::to_string(terminator.line)+". Semicolon or curly braces were expected after Node declaration.\n";
@@ -716,12 +797,21 @@ namespace eclang {
             }break;
             case lexer::type::IDENTIFIER: {
                 // This is where things get complex
-                // TODO: Create scope and pass current node (Object) to parseIdentifier
-                Object o{"a","a"};
-                parseIdentifier(tokens, current, o, language);
+                if (scope.size() == 0) {
+                    std::cerr << "ECLANG_ERROR: Tried to close root at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+".\n";
+                    break;
+                }
+                // If we are in a node, pass the current Object in the scope
+                current += parseIdentifier(tokens, current, scope.at(scope.size()-1), language);
             } break;
             case lexer::type::SCOPE_EXIT:
-                // TODO: Set the parent node as current
+                if (scope.size() == 0) {
+                    std::cerr << "ECLANG_ERROR: Tried to close root at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+".\n";
+                    break;
+                }
+                // if we are in a node, pop back
+                scope.pop_back();
+                break;
             default:
                 // Everything that does not start an instruction goes through here.
                 // If something is not starting an instruction then it shouldn't be here.
@@ -730,6 +820,13 @@ namespace eclang {
                 break;
             }
         }
+
+        // DEBUG
+        std::cout << "ECLANG_LOG: Size of Objects Array: "+std::to_string(objects.size())+"\n";
+        for (Object* o : objects) {
+            delete o;
+        }
+        std::cout << "ECLANG_LOG: Deleted Objects\n";
     }
     /**
         Constructs all the Object objects by reading a binary file.

@@ -36,12 +36,16 @@ namespace eclang {
             Constructs the Object object with the class name and the object's name
         */
         Object(std::string className, std::string name);
+        /**
+            Delete all the registered Attributes
+        */
+        ~Object();
 
         /**
             Adds an attribute. This attribute must contain data.
             Do not call this manually.
         */
-        void _addAttribute(Attribute a);
+        void _addAttribute(Attribute* a);
         /**
             Adds an Object object as a child of this object.
             Do not call this manually.
@@ -122,7 +126,7 @@ namespace eclang {
 
         std::string name; // This object's name
         std::string className; // The class' name
-        std::vector<Attribute> attributes; // List of attributes (with data)
+        std::vector<Attribute*> attributes; // List of attributes (with data)
         std::vector<Object> children; // List of other objects
     };
 }

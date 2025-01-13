@@ -3,7 +3,7 @@
 
 int main() {
     std::cout << "Testing Source File:\n";
-    eclang::EcLang testEcLang1("testFile.eld");
+    eclang::EcLang testEcLang1("testFile.elt");
     std::cout << "Testing Binary File:\n";
-    eclang::EcLang testEcLang2("testFile.eldc");
+    eclang::EcLang testEcLang2("testFile.eltc");
 }

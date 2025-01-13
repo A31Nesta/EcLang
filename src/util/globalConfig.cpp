@@ -23,12 +23,50 @@ namespace eclang::config {
                     {"type", type::STRING}
                 }}
             }
+        },
+        // Debug EcLang
+        // ------------
+        {
+            "test", "elt", "eltc", {'E', 'C', 'L', 'T', 0x31}, {
+                {"Container"}, // Empty, just to debug putting nodes inside nodes
+                // DEBUG ASSIGN
+                {"StringTests", { // Debug Strings
+                    {"string", type::STRING},
+                    {"stringMD", type::STR_MD},
+                }},
+                {"NumberTests", { // Debug Numbers
+                    {"int8", type::INT8},
+                    {"int16", type::INT16},
+                    {"int32", type::INT32},
+                    {"int64", type::INT64},
+
+                    {"uint8", type::UINT8},
+                    {"uint16", type::UINT16},
+                    {"uint32", type::UINT32},
+                    {"uint64", type::UINT64},
+
+                    {"float", type::FLOAT},
+                    {"double", type::DOUBLE}
+                }},
+                {"VectorTests", { // Debug Vectors
+                    {"vec2f", type::VEC2F},
+                    {"vec3f", type::VEC3F},
+                    {"vec4f", type::VEC4F},
+
+                    {"vec2d", type::VEC2D},
+                    {"vec3d", type::VEC3D},
+                    {"vec4d", type::VEC4D},
+
+                    {"vec2i", type::VEC2I},
+                    {"vec3i", type::VEC3I},
+                    {"vec4i", type::VEC4I},
+
+                    {"vec2l", type::VEC2L},
+                    {"vec3l", type::VEC3L},
+                    {"vec4l", type::VEC4L}
+                }}
+            }
         }
-        // AUII
-        // ----
-        // {
-        //     "AUII", "auii", "auic", {'A', 'U', 'I', 'I', 0x31}
-        // }
     };
 
     // "PRIVATE" FUNCTIONS

@@ -74,7 +74,7 @@ namespace eclang {
             Returns the Object objects from the current file as a vector.
             The Objects allow us to access all the data with a simple interface
         */
-        std::vector<Object> getAllObjects();
+        std::vector<Object*> getAllObjects();
 
     private:
         /**
@@ -134,7 +134,7 @@ namespace eclang {
         // All the objects obtained from parsing/reading source/binary file.
         // Unlike the Classes used to create Languages, these Objects' attributes
         // contain actual data that we can read with `object.get<DataType>Of(attribute);`
-        std::vector<Object> objects;
+        std::vector<Object*> objects;
         // While reading, objects are created and stored in the `objects` array.
         // When we enter scope, we add the last object in the `objects` array here.
         // When we exit scope, we remove the last object in this array.
