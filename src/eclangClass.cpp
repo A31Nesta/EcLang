@@ -599,6 +599,14 @@ namespace eclang {
         isIncluded = true;
         return objects;
     }
+    /**
+        Returns the Template Node Path.
+        The template node path will be empty if the file doesn't contain
+        a #template tag.
+    */
+    std::vector<Object*> EcLang::_getTemplateNodePath() {
+        return templateNode;
+    }
 
     // PRIVATE
     // -------
@@ -776,14 +784,29 @@ namespace eclang {
                 else if (t.string == "#template") {
                     const lexer::Token& file = tokens.at(current+1); // This should be a String
                     if (file.type == lexer::type::STRING) {
-                        // TODO: Create child EcLang and append our contents to the specified file's template node
+                        // Create child EcLang and append our contents to the specified file's template node
+                        #ifdef ECLANG_DEBUG
+                        std::cout << "ECLANG_LOG: Statically including Template file: "+file.string+"\n";
+                        #endif
+                        EcLang includedEcLang(file.string);
+                        std::vector<Object*> children = includedEcLang._getAllObjectsAsInclude();
+                        std::vector<Object*> templateNode = includedEcLang._getTemplateNodePath();
+                        // Add to current object in scope OR simply add to root
+                        if (scope.empty()) {
+                            objects.insert(objects.end(), children.begin(), children.end());
+                        } else {
+                            scope.at(scope.size()-1)->_addChildren(children);
+                        }
+                        // Add template node to current scope (even if any of the vectors is empty)
+                        scope.insert(scope.end(), templateNode.begin(), templateNode.end());
 
                         // Update current
                         current += 1;
                     }
                     // If there's no string afterwards we set this node as template node
                     else {
-                        // TODO: Set as Template Node
+                        // Set current scope as Template Node
+                        templateNode = scope;
                     }
                 }
                 // TEMPLATE-DYN

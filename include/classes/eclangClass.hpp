@@ -125,6 +125,12 @@ namespace eclang {
             function (the parent node during inclusion)
         */
         std::vector<Object*> _getAllObjectsAsInclude();
+        /**
+            Returns the Template Node Path.
+            The template node path will be empty if the file doesn't contain
+            a #template tag.
+        */
+        std::vector<Object*> _getTemplateNodePath();
 
         // The name of this file without the extension
         std::string name;
@@ -157,5 +163,13 @@ namespace eclang {
         // If this is the case, even if this EcLang instance is deleted we
         // don't want to delete our Objects
         bool isIncluded = false;
+
+        // Inclusion / Templating
+        // ----------------------
+
+        // Template Node Path.
+        // The stack (scope) that corresponds to the template node.
+        // Empty if there are no template nodes
+        std::vector<Object*> templateNode;
     };
 }
