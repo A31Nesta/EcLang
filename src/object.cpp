@@ -67,8 +67,45 @@ namespace eclang {
         Returns all children of this object.
         The vector may be empty
     */
-    std::vector<Object*> Object::getChildren() {
+    std::vector<Object*> Object::getObjects() {
         return children;
+    }
+    /**
+        Returns the Object objects with the class name specified
+        from the current file as a vector.
+    */
+    std::vector<Object*> Object::getObjectsByClass(std::string className) {
+        std::vector<Object*> objsWithClass;
+        for (Object* o : children) {
+            if (o->getClassName() == className) {
+                objsWithClass.push_back(o);
+            }
+        }
+        return objsWithClass;
+    }
+    /**
+        Returns the Object object with the name specified.
+        The pointer returned may be nullptr.
+    */
+    Object* Object::getObject(std::string name) {
+        // Is this a path?
+        size_t indexOfSlash = name.find_first_of('/');
+        if (indexOfSlash != std::string::npos) {
+            std::string firstNode = name.substr(0, indexOfSlash);
+            for (Object* o : children) {
+                if (o->getName() == firstNode) {
+                    // Get Node by path from Object (This is recursive)
+                    return o->getObject(name.substr(indexOfSlash+1));
+                }
+            }
+        } else {
+            for (Object* o : children) {
+                if (o->getName() == name) {
+                    return o;
+                }
+            }
+        }
+        return nullptr;
     }
     /**
         Returns the names of all registered attributes

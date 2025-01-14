@@ -74,7 +74,17 @@ namespace eclang {
             Returns all children of this object.
             The vector may be empty
         */
-        std::vector<Object*> getChildren();
+        std::vector<Object*> getObjects();
+        /**
+            Returns the Object objects with the class name specified
+            from the current file as a vector.
+        */
+        std::vector<Object*> getObjectsByClass(std::string className);
+        /**
+            Returns the Object object with the name specified.
+            The pointer returned may be nullptr.
+        */
+        Object* getObject(std::string name);
 
         /**
             Returns the ID of the attribute.

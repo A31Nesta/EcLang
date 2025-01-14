@@ -79,6 +79,17 @@ namespace eclang {
             The Objects allow us to access all the data with a simple interface
         */
         std::vector<Object*> getAllObjects();
+        /**
+            Returns the Object objects with the class name specified
+            from the current file as a vector.
+        */
+        std::vector<Object*> getObjectsByClass(std::string className);
+        /**
+            Returns the Object object with the name specified.
+            A specific object in the hierarchy can be specified with paths (node1/node2/node3).
+            The pointer returned may be nullptr.
+        */
+        Object* getObject(std::string name);
 
     private:
         /**

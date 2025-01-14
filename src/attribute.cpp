@@ -2,6 +2,7 @@
 #include "classes/vectors.hpp"
 #include <cstdint>
 #include <iostream>
+#include <string>
 
 namespace eclang {
     // CONSTRUCTORS
@@ -83,8 +84,8 @@ namespace eclang {
     Attribute::Attribute(std::string name, std::string value, type::Type type) {
         this->name = name;
         this->type = type;
-        bytesValue = value.c_str(); // We're not using new here!!
-        sizeofValue = sizeof(char)*value.length();
+        bytesValue = new std::string(value);
+        sizeofValue = sizeof(value);
     }
     Attribute::Attribute(std::string name, vec2i value) {
         this->name = name;
@@ -205,7 +206,7 @@ namespace eclang {
                 break;
             case type::STRING:
             case type::STR_MD:
-                // delete (std::string*)bytesValue; // NOT USING NEW!!!
+                delete (std::string*)bytesValue;
                 break;
             case type::VEC2I:
                 delete (vec2i*)bytesValue;

@@ -81,7 +81,7 @@ namespace eclang {
             indentationStr += "\t";
         }
         for (Object* o : objects) {
-            std::vector<Object*> children = o->getChildren();
+            std::vector<Object*> children = o->getObjects();
             std::cout << 
                 indentationStr + "N_CHILDREN: " << children.size() << "\n" <<
                 indentationStr + "N_ATTRIBUT: " << o->getAttributes().size() << "\n" <<
@@ -598,6 +598,44 @@ namespace eclang {
     */
     std::vector<Object*> EcLang::getAllObjects() {
         return objects;
+    }
+    /**
+        Returns the Object objects with the class name specified
+        from the current file as a vector.
+    */
+    std::vector<Object*> EcLang::getObjectsByClass(std::string className) {
+        std::vector<Object*> objsWithClass;
+        for (Object* o : objects) {
+            if (o->getClassName() == className) {
+                objsWithClass.push_back(o);
+            }
+        }
+        return objsWithClass;
+    }
+    /**
+        Returns the Object object with the name specified.
+        The pointer returned may be nullptr.
+    */
+    Object* EcLang::getObject(std::string name) {
+        // Is this a path?
+        size_t indexOfSlash = name.find_first_of('/');
+        if (indexOfSlash != std::string::npos) {
+            std::string firstNode = name.substr(0, indexOfSlash);
+            for (Object* o : objects) {
+                if (o->getName() == firstNode) {
+                    // Get Node by path from Object (This is recursive)
+                    return o->getObject(name.substr(indexOfSlash+1));
+                }
+            }
+        } else {
+            // This is not a path, just a single node
+            for (Object* o : objects) {
+                if (o->getName() == name) {
+                    return o;
+                }
+            }
+        }
+        return nullptr;
     }
     // FOR USE IN ANOTHER ECLANG (Private, moved up here to keep it close to getAllObjects)
     /**

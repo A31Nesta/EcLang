@@ -10,4 +10,10 @@ int main() {
     eclang::EcLang testEcLang1("testFile.elt");
     std::cout << "Testing Binary File:\n";
     eclang::EcLang testEcLang2("testFile.eltc");
+
+    // Try to get allTestData/correctData/stringTest1/string
+    eclang::Object* stringTest1 = testEcLang1.getObject("templateParent/templateNode/allTestData/correctData/stringTest1");
+    if (stringTest1 == nullptr) { return 0; }
+    uint8_t stringAttribute = stringTest1->getIDOf("string");
+    std::cout << "Value of allTestData/correctData/stringTest1/string: " << stringTest1->getStringOf(stringAttribute) << "\n";
 }
