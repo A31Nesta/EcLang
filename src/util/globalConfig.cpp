@@ -1,5 +1,7 @@
 #include "globalConfig.hpp"
 #include "classes/attribute.hpp"
+#include <stdexcept>
+#include <unordered_map>
 #include <vector>
 
 namespace eclang::config {
@@ -69,6 +71,8 @@ namespace eclang::config {
         }
     };
 
+    std::unordered_map<std::string, std::string> aliasToPath;
+
     // "PRIVATE" FUNCTIONS
     // -------------------
 
@@ -88,5 +92,27 @@ namespace eclang::config {
     */
     void registerLanguage(Language lang) {
         languages.push_back(lang);
+    }
+
+    /**
+        Adds an alias to a file path.
+        Whether or not the path is valid is not checked.
+    */
+    void filepathRegister(std::string alias, std::string path) {
+        aliasToPath[alias] = path;
+    }
+    /**
+        Is this string an alias?
+    */
+    bool filepathIsAlias(std::string alias) {
+        // Since C++ 20 we could use .contains()
+        return aliasToPath.find(alias) != aliasToPath.end();
+    }
+    /**
+        Returns the file path for the given alias
+    */
+    std::string filepathGetFor(std::string alias) {
+        if (!filepathIsAlias(alias)) throw std::runtime_error("ECLANG_ERROR: Tried to obtain filepath for invalid alias.");
+        return aliasToPath[alias];
     }
 }

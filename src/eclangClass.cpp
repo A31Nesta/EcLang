@@ -481,10 +481,21 @@ namespace eclang {
         detected.
     */
     EcLang::EcLang(std::string filepath) {
+        // The filepath specified may be an alias.
+        // This string contains the actual file path that we can load.
+        std::string trueFilepath;
+
+        // Get alias if it exists
+        if (config::filepathIsAlias(filepath)) {
+            trueFilepath = config::filepathGetFor(filepath);
+        } else {
+            trueFilepath = filepath;
+        }
+
         // Read file as binary
-        std::ifstream file(filepath, std::ios::binary);
+        std::ifstream file(trueFilepath, std::ios::binary);
         if (!file) {
-            throw std::runtime_error("ECLANG_ERROR: Couldn't load file \""+filepath+"\". No such fie or directory");
+            throw std::runtime_error("ECLANG_ERROR: Couldn't load file \""+trueFilepath+"\". No such fie or directory");
         }
 
         // Find file size
@@ -503,8 +514,8 @@ namespace eclang {
         file.close();
 
         // Get file name without extension
-        size_t indexOfLastSlash = filepath.find_last_of('/');
-        size_t indexOfLastDot = filepath.find_last_of('.');
+        size_t indexOfLastSlash = trueFilepath.find_last_of('/');
+        size_t indexOfLastDot = trueFilepath.find_last_of('.');
         // If there are no slash characters in the name, the file name starts in the 0th position
         if (indexOfLastSlash == std::string::npos) {
             indexOfLastSlash = 0;
@@ -516,11 +527,11 @@ namespace eclang {
         // If there are no dot characters in the name, the file name ends in the last position of the string
         if (indexOfLastDot == std::string::npos) {
             // We set to length and not length - 1 because substr will read `indexOfLastDot - indexOfLastSlash` characters in the string.
-            // For example, if `indexOfLastSlash` is 0, we would read `filepath.length()` characters from the position 0 (the whole string)
-            indexOfLastDot = filepath.length();
+            // For example, if `indexOfLastSlash` is 0, we would read `trueFilepath.length()` characters from the position 0 (the whole string)
+            indexOfLastDot = trueFilepath.length();
         }
         // Finally get name without extension
-        this->name = filepath.substr(indexOfLastSlash, indexOfLastDot - indexOfLastSlash);
+        this->name = trueFilepath.substr(indexOfLastSlash, indexOfLastDot - indexOfLastSlash);
 
         // Initialize EcLang with the raw file data
         initializeEcLang(buffer, length);
@@ -834,7 +845,8 @@ namespace eclang {
                         std::cerr << "ECLANG_ERROR: Unexpected token \""+file.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". Usage: #register <alias:Sring> <path:String>\n";
                         break;
                     }
-                    // TODO: Add specified file into a map with aliases for files
+                    // Add specified file to configuration
+                    config::filepathRegister(alias.string, file.string);
 
                     // Update current
                     current += 2;
