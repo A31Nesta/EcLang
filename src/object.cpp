@@ -10,10 +10,11 @@ namespace eclang {
     /**
         Constructs the Object object with the class name and the object's name
     */
-    Object::Object(std::string className, std::string name) {
+    Object::Object(std::string className, std::string name, uint8_t sourceFileID) {
         // Copy data to object
         this->className = className;
         this->name = name;
+        this->sourceFileID = sourceFileID;
     }
     /**
         Delete all the registered Attributes
@@ -135,6 +136,13 @@ namespace eclang {
         }
         // If we didn't find it, return invalid ID
         return -1;
+    }
+
+    /**
+        Returns the source file ID for this object
+    */
+    uint8_t Object::getSourceFileID() {
+        return sourceFileID;
     }
 
     /**

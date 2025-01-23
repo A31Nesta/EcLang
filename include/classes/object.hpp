@@ -30,12 +30,16 @@ namespace eclang {
         12| }                                                         |
         --------------------------------------------------------------
     */
+    // TODO: Separate the current "Object" objects into internal and API classes
+    // The classes should be Object for the internal class and Node for the API
+    // The change in name for "nodes" is because the files are supposed to represent
+    // a tree.
     class Object {
     public:
         /**
             Constructs the Object object with the class name and the object's name
         */
-        Object(std::string className, std::string name);
+        Object(std::string className, std::string name, uint8_t sourceFileID);
         /**
             Delete all the registered Attributes
         */
@@ -100,6 +104,11 @@ namespace eclang {
         */
         type::Type getTypeOf(uint8_t attribute);
 
+        /**
+            Returns the source file ID for this object
+        */
+        uint8_t getSourceFileID();
+
         
         // Not gonna comment all of this lol
         // GET DATA ------------------------
@@ -143,5 +152,10 @@ namespace eclang {
         std::string className; // The class' name
         std::vector<Attribute*> attributes; // List of attributes (with data)
         std::vector<Object*> children; // List of other objects
+
+        
+        // ID of the file that loaded this object. Each ID corresponds to a file
+        // in the `includedFilenames` array from the EcLang object
+        uint8_t sourceFileID;
     };
 }

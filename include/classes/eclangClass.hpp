@@ -25,7 +25,7 @@ namespace eclang {
             The Language (AUII, NEA, Other...) will be automatically
             detected.
         */
-        EcLang(std::string filepath);
+        EcLang(std::string filepath, uint8_t fileID = 0);
         /**
             Constructs an EcLang object from raw data that corresponds to the
             contents of a source or compiled EcLang file.
@@ -35,7 +35,7 @@ namespace eclang {
             The name must not contain an extension and will be used during
             file export if no name is specified
         */
-        EcLang(std::string name, void* data, size_t size);
+        EcLang(std::string name, void* data, size_t size, uint8_t fileID = 0);
         /**
             Guess what it does
         */
@@ -143,8 +143,17 @@ namespace eclang {
         */
         std::vector<Object*> _getTemplateNodePath();
 
-        // The name of this file without the extension
-        std::string name;
+        // Names of files relevant to this file
+        // When a file is included or used as template dynamically,
+        // its name gets registered here.
+        // Every object has an associated file in the form
+        // of a numeric ID.
+        // 
+        // This array is only used when the file is opened directly
+        // by the user.
+        // 
+        // The index 0 contains the name of this file
+        std::vector<std::string> includedFilenames;
         // Determined during initialization. It indicates whether or not the file
         // was a source file or a compiled file.
         bool fileWasSource;
@@ -183,21 +192,14 @@ namespace eclang {
         // Empty if there are no template nodes
         std::vector<Object*> templateNode;
 
-        // Names of files relevant to this file
-        // When a file is included or used as template dynamically,
-        // its name gets registered here.
-        // Every object has an associated file in the form
-        // of a numeric ID.
-        std::vector<std::string> includedFilenames;
-        // IDs of the files relevant. For each object in the objects
-        // vector there is an ID here that corresponds to a file
-        // in `includedFilenames`.
-        // This is not a part of each Object because of missing abstraction
-        // layers.
-        //
-        // TODO: Separate the current "Object" objects into internal and API classes
-        // The internal Object would have the source file ID as an attribute, while
-        // the API object (Node) would only give access to its Attributes
-        std::vector<uint8_t> objectSourceFiles;
+        // The current file. When a file is dynamically included,
+        // the current file index goes up and the name is registered
+        // into the array. This value is copied into every loaded object.
+        // 
+        // IMPORTANT! If this value is set to non-zero in the constructor, all inclusions
+        // will be done statically. This is because we only care about compiling the current
+        // file; dynamically included files are compiled into an "include" instruction so we
+        // shouldn't need to care about files that may change.
+        const uint8_t currentFile;
     };
 }

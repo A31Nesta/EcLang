@@ -480,7 +480,7 @@ namespace eclang {
         The Language (AUII, NEA, Other...) will be automatically
         detected.
     */
-    EcLang::EcLang(std::string filepath) {
+    EcLang::EcLang(std::string filepath, uint8_t fileID) : currentFile(fileID) {
         // The filepath specified may be an alias.
         // This string contains the actual file path that we can load.
         std::string trueFilepath;
@@ -531,7 +531,11 @@ namespace eclang {
             indexOfLastDot = trueFilepath.length();
         }
         // Finally get name without extension
-        this->name = trueFilepath.substr(indexOfLastSlash, indexOfLastDot - indexOfLastSlash);
+        // Register this name into array if this is the original file loaded by the user (fileID = 0)
+        // This is used when exporting the file
+        if (fileID == 0) {
+            includedFilenames.push_back(trueFilepath.substr(indexOfLastSlash, indexOfLastDot - indexOfLastSlash));
+        }
 
         // Initialize EcLang with the raw file data
         initializeEcLang(buffer, length);
@@ -545,8 +549,12 @@ namespace eclang {
         The Language (AUII, NEA, Other...) will be automatically
         detected.
     */
-    EcLang::EcLang(std::string name, void* data, size_t size) {
-        this->name = name;
+    EcLang::EcLang(std::string name, void* data, size_t size, uint8_t fileID) : currentFile(fileID) {
+        // Register name into array if this is the original file loaded by the user (fileID = 0)
+        // This is used when exporting the file
+        if (fileID == 0) {
+            includedFilenames.push_back(name);
+        }
         initializeEcLang(data, size);
     }
     /**
@@ -578,7 +586,10 @@ namespace eclang {
         Saves the compiled EcLang file (compiled at initialization or simply loaded)
     */
     void EcLang::saveToFileCompiled(std::string fileWithoutExtension) {
-        if (fileWithoutExtension == "") fileWithoutExtension = name;
+        // Check: is this file the one loaded by the user?
+        if (currentFile != 0) throw std::runtime_error("ECLANG_FATAL: Attempted to compile a dynamically included file");
+        // Check: is the name valid?
+        if (fileWithoutExtension == "") fileWithoutExtension = includedFilenames[0];
         // TODO: Implement save to file compiled
     }
     /**
@@ -588,7 +599,10 @@ namespace eclang {
         any comments, as they're lost during compilation.
     */
     void EcLang::saveToFileSource(std::string fileWithoutExtension) {
-        if (fileWithoutExtension == "") fileWithoutExtension = name;
+        // Check: is this file the one loaded by the user?
+        if (currentFile != 0) throw std::runtime_error("ECLANG_FATAL: Attempted to compile a dynamically included file");
+        // Check: is the name valid?
+        if (fileWithoutExtension == "") fileWithoutExtension = includedFilenames[0];
         // TODO: Implement save to file source
     }
 
@@ -826,8 +840,39 @@ namespace eclang {
                         std::cerr << "ECLANG_ERROR: Unexpected token \""+file.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". String was expected\n";
                         break;
                     }
-                    // TODO: Create child EcLang and append its contents to our contents
-                    // THIS VERSION SHOULD STORE THE PATH TO THE FILE! WE CANNOT COMPILE THE FILE DIRECTLY
+                    // We're including dynamically. If this file is the original file loaded by the user,
+                    // we will save the filename and give the new EcLang object its fileID number
+                    // If this file is being dynamically included, we include statically and set currentFile
+                    // to our currentFile so that it appears as if this file had the new file's nodes
+                    uint8_t includedFile = (currentFile==0) ? includedFilenames.size() : currentFile;
+
+                    #ifdef ECLANG_DEBUG 
+                    if (currentFile != 0) {
+                        std::cout << "ECLANG_LOG: Dynamic inclusion detected in dynamically included file... including statically: "+file.string+"\n";
+                    } else {
+                        std::cout << "ECLANG_LOG: Dynamically including file: "+file.string+"\n";
+                    }
+                    #endif
+
+                    EcLang includedEcLang(file.string, includedFile);
+                    
+                    // We only have to do this is the file included by the user. We register the path
+                    // so that the file ID actually points to something lol
+                    if (currentFile == 0) {
+                        includedFilenames.push_back(file.string);
+                    }
+
+                    // Include into our current scene
+                    std::vector<Object*> children = includedEcLang._getAllObjectsAsInclude();
+                    // Add to current object in scope OR simply add to root
+                    if (scope.empty()) {
+                        objects.insert(objects.end(), children.begin(), children.end());
+                    } else {
+                        scope.at(scope.size()-1)->_addChildren(children);
+                    }
+
+                    // Update current
+                    current += 1;
                 }
                 // TEMPLATE
                 else if (t.string == "#template") {
@@ -901,7 +946,7 @@ namespace eclang {
                     break;
                 }
                 if (terminator.type == lexer::type::SEMICOLON) {
-                    Object* o = new Object(t.string, identifier.string);
+                    Object* o = new Object(t.string, identifier.string, currentFile);
                     // Only add to `objects` if the scope is empty
                     // If not, we add it to the latest object in the scope
                     if (scope.empty()) {
@@ -911,7 +956,7 @@ namespace eclang {
                     }
                 }
                 else if (terminator.type == lexer::type::SCOPE_ENTER) {
-                    Object* o = new Object(t.string, identifier.string);
+                    Object* o = new Object(t.string, identifier.string, currentFile);
                     // Only add to `objects` if the scope is empty
                     // If not, we add it to the latest object in the scope
                     if (scope.empty()) {
