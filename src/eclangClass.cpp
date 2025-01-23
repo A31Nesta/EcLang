@@ -910,8 +910,40 @@ namespace eclang {
                         std::cerr << "ECLANG_ERROR: Unexpected token \""+t.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". String was expected\n";
                         break;
                     }
-                    // TODO: Create child EcLang and append our contents to the specified file's template node
-                    // THIS VERSION SHOULD STORE THE PATH TO THE FILE! WE CANNOT COMPILE THE FILE DIRECTLY
+                    
+                    // We're including dynamically. If this file is the original file loaded by the user,
+                    // we will save the filename and give the new EcLang object its fileID number
+                    // If this file is being dynamically included, we include statically and set currentFile
+                    // to our currentFile so that it appears as if this file had the new file's nodes
+                    uint8_t includedFile = (currentFile==0) ? includedFilenames.size() : currentFile;
+
+                    #ifdef ECLANG_DEBUG 
+                    if (currentFile != 0) {
+                        std::cout << "ECLANG_LOG: Dynamic inclusion detected in dynamically included Template file... including statically: "+file.string+"\n";
+                    } else {
+                        std::cout << "ECLANG_LOG: Dynamically including Template file: "+file.string+"\n";
+                    }
+                    #endif
+
+                    EcLang includedEcLang(file.string, includedFile);
+                    
+                    // We only have to do this is the file included by the user. We register the path
+                    // so that the file ID actually points to something
+                    if (currentFile == 0) {
+                        includedFilenames.push_back(file.string);
+                    }
+
+                    // Include into our current scene
+                    std::vector<Object*> children = includedEcLang._getAllObjectsAsInclude();
+                    std::vector<Object*> templateNode = includedEcLang._getTemplateNodePath();
+                    // Add to current object in scope OR simply add to root
+                    if (scope.empty()) {
+                        objects.insert(objects.end(), children.begin(), children.end());
+                    } else {
+                        scope.at(scope.size()-1)->_addChildren(children);
+                    }
+                    // Add template node to current scope (even if any of the vectors is empty)
+                    scope.insert(scope.end(), templateNode.begin(), templateNode.end());
 
                     // Update current
                     current += 1;
