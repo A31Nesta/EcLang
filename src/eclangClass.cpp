@@ -707,6 +707,7 @@ namespace eclang {
 
             // If any of the bytes is not the found in our data,
             // set found to false and break
+            // TODO: Extract bytes from file until we find NULL (0) and compare the sequences instead of comparing directly
             for (uint8_t i = 0; i < numberOfBytes; i++) {
                 if (data[i] != identifierBytes.at(i)) {
                     found = false;
@@ -858,8 +859,9 @@ namespace eclang {
                     
                     // We only have to do this is the file included by the user. We register the path
                     // so that the file ID actually points to something lol
+                    // The extra "i" indicates that this is an include
                     if (currentFile == 0) {
-                        includedFilenames.push_back(file.string);
+                        includedFilenames.push_back("i"+file.string);
                     }
 
                     // Include into our current scene
@@ -928,9 +930,10 @@ namespace eclang {
                     EcLang includedEcLang(file.string, includedFile);
                     
                     // We only have to do this is the file included by the user. We register the path
-                    // so that the file ID actually points to something
+                    // so that the file ID actually points to something.
+                    // The extra "t" indicates that this is a template
                     if (currentFile == 0) {
-                        includedFilenames.push_back(file.string);
+                        includedFilenames.push_back("t"+file.string);
                     }
 
                     // Include into our current scene
@@ -1043,5 +1046,84 @@ namespace eclang {
     */
     void EcLang::constructFromBinary(std::vector<uint8_t> compiled) {
         // TODO: Implement reading binary file
+    }
+
+    /**
+        Takes the source file (string) as input and returns a vector of uint8_t
+        containing the compiled file.
+
+        This method is called when calling saveToFileCompiled() if the file is a source file.
+
+        WHAT IT DOES
+        1. Save Identifier Bytes for the language and NULL-terminate
+
+        2. For each object in the array, check what file it belongs to. Is the File ID 0?
+            T: Then this object is part of this file or was statically included
+                2.T.1. Save the object name (NULL-terminated) after the [CREATE] instruction (see below)
+                    2.T.1.A. To save time, I skipped the checks about adding [SCOPE_ENTER] and [SCOPE_EXIT] instructions.
+                        These instructions are added if the object has children, has attributes or is a Template Node.
+                        If the [SCOPE_ENTER] has been used, we should add a [SCOPE_EXIT] at the end
+
+                2.T.2. Does this object have children?
+                    T: We should run this entire section for each of the children again (recursively)
+                        2.T.2.T.1. Get all children of the object and repeat point [2] for each child
+
+                2.T.3. Register all attributes with the [ATTRIBUTE] instruction followed by the Attribute ID and
+                    the value (ID and size of value depends on the language)
+
+                2.T.4. Is this object the same as the last one in `templateNode` (if it's not empty)?
+                    T: Then we should mark it 
+                        2.T.4.T.1. Add a [MARK_TEMPLATE] instruction
+
+            
+            F: This file was included Dynamically. We know if the file is an include or a template because of the first character of the file name
+                2.F.1. Add a [TEMPLATE] or [INCLUDE] instruction with the file name (NULL-terminated)
+                    2.F.1.A. If the file is a Template, we register it so that we can ignore any other node also coming from that file later on
+                    2.F.1.B. If the file is a Template and we already included a Template, the compilation fails.
+                        TODO: Make usage of multiple templates illegal in the parser.
+
+                2.F.2. DO NOT ADD ANY OBJECT TO THE BINARY!
+                2.F.3. Continue consuming objects until we see that the next object has a different file ID.
+                2.F.4. When we find a different file ID we stop consuming. Continue.
+
+
+        INSTRUCTIONS
+        - CREATE: [0x00] - Takes STRING as parameter.
+        - ATTRIBUTE: [0x01] - Language-dependent; Takes Attribute ID (UINT8_T) and a Language-specific value
+        - SCOPE_ENTER: [0x02] - Takes nothing. Enters the scope of the last created Object
+        - SCOPE_EXIT: [0x03] - Takes nothing. Returns to the parent node's scope
+        - INCLUDE: [0x04] - Takes STRING with the file name or alias. Represents a Dynamic Include (`include-dyn`)
+        - TEMPLATE: [0x05] - Takes STRING with the file name or alias. Represents a Dynamic Template (`template-dyn`)
+        - MARK_TEMPLATE: [0x06] - Takes nothing. Marks the current node as Template Node
+        
+        DATA TYPES
+        The only strange one are Strings because of their variable size:
+        - STRING: Starts with a [0x00] to indicate that it's a normal String, then it continues until the next 0.
+        - STRING_MD: Starts with a [0x01] to indicate that it's a Markdown String, then it continues until the next 0.
+
+        TODO: Implement Compilation
+    */
+    std::vector<uint8_t> EcLang::compile(std::string source) {
+        std::vector<uint8_t> binary;
+
+
+        return binary;
+    }
+    /**
+        Takes the compiled file (binary) as input and returns a string containing the
+        decompiled source code.
+
+        This method is called when calling saveToFileSource().
+        If this method fails to execute, an exception will be thrown.
+        Errors can happen if the Language used for compilation is not the same as the
+        one used for decompilation (for example due to updates to the language)
+
+        TODO: Implement Decompilation
+    */
+    std::string EcLang::decompile(std::vector<uint8_t> compiled) {
+        std::string source;
+
+
+        return source;
     }
 }
