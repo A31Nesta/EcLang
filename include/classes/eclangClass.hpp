@@ -182,5 +182,22 @@ namespace eclang {
         // The stack (scope) that corresponds to the template node.
         // Empty if there are no template nodes
         std::vector<Object*> templateNode;
+
+        // Names of files relevant to this file
+        // When a file is included or used as template dynamically,
+        // its name gets registered here.
+        // Every object has an associated file in the form
+        // of a numeric ID.
+        std::vector<std::string> includedFilenames;
+        // IDs of the files relevant. For each object in the objects
+        // vector there is an ID here that corresponds to a file
+        // in `includedFilenames`.
+        // This is not a part of each Object because of missing abstraction
+        // layers.
+        //
+        // TODO: Separate the current "Object" objects into internal and API classes
+        // The internal Object would have the source file ID as an attribute, while
+        // the API object (Node) would only give access to its Attributes
+        std::vector<uint8_t> objectSourceFiles;
     };
 }
