@@ -17,6 +17,22 @@
 #include <string>
 #include <vector>
 
+// Defines (Instructions for clearer compiler code)
+#define INST_CREATE         uint8_t(0x01)
+#define INST_ATTRIBUTE      uint8_t(0x02)
+#define INST_SCOPE_ENTER    uint8_t(0x03)
+#define INST_SCOPE_EXIT     uint8_t(0x04)
+#define INST_INCLUDE        uint8_t(0x05)
+#define INST_TEMPLATE       uint8_t(0x06)
+#define INST_MARK_TEMPLATE  uint8_t(0x07)
+
+// When creating an object or attribute during compilation,
+// we might find a custom class or attribute. In this case
+// we enter INST_ATTR_CUSTOM (255) as an attribute followed
+// by a STRING.
+#define INST_ATTR_CUSTOM    uint8_t(255)
+
+
 namespace eclang {
     // Other
     #ifdef ECLANG_DEBUG
@@ -812,6 +828,7 @@ namespace eclang {
             switch (t.type) {
             case lexer::type::KEYWORD: {
                 // INCLUDE
+                // TODO: Disallow including files written in other languages statically (compiler limitation)
                 if (t.string == "#include") {
                     const lexer::Token& file = tokens.at(current+1); // This should be a String
                     if (file.type != lexer::type::STRING) {
@@ -877,6 +894,7 @@ namespace eclang {
                     current += 1;
                 }
                 // TEMPLATE
+                // TODO: Disallow using files written in other languages as templates statically (compiler limitation)
                 else if (t.string == "#template") {
                     const lexer::Token& file = tokens.at(current+1); // This should be a String
                     if (file.type == lexer::type::STRING) {
@@ -1049,8 +1067,7 @@ namespace eclang {
     }
 
     /**
-        Takes the source file (string) as input and returns a vector of uint8_t
-        containing the compiled file.
+        returns a vector of uint8_t containing the compiled file.
 
         This method is called when calling saveToFileCompiled() if the file is a source file.
 
@@ -1088,30 +1105,260 @@ namespace eclang {
 
 
         INSTRUCTIONS
-        - CREATE: [0x00] - Takes STRING as parameter.
-        - ATTRIBUTE: [0x01] - Language-dependent; Takes Attribute ID (UINT8_T) and a Language-specific value
-        - SCOPE_ENTER: [0x02] - Takes nothing. Enters the scope of the last created Object
-        - SCOPE_EXIT: [0x03] - Takes nothing. Returns to the parent node's scope
-        - INCLUDE: [0x04] - Takes STRING with the file name or alias. Represents a Dynamic Include (`include-dyn`)
-        - TEMPLATE: [0x05] - Takes STRING with the file name or alias. Represents a Dynamic Template (`template-dyn`)
-        - MARK_TEMPLATE: [0x06] - Takes nothing. Marks the current node as Template Node
+        - INST_CREATE:        [0x00] - Takes the Language-specific Class ID (or 255 and then a STRING with the Class Name) and the name as a STRING as parameter.
+        - INST_ATTRIBUTE:     [0x01] - Language-dependent; Takes Attribute ID (UINT8_T) and a Language-specific value
+        - INST_SCOPE_ENTER:   [0x02] - Takes nothing. Enters the scope of the last created Object
+        - INST_SCOPE_EXIT:    [0x03] - Takes nothing. Returns to the parent node's scope
+        - INST_INCLUDE:       [0x04] - Takes STRING with the file name or alias. Represents a Dynamic Include (`include-dyn`)
+        - INST_TEMPLATE:      [0x05] - Takes STRING with the file name or alias. Represents a Dynamic Template (`template-dyn`)
+        - INST_MARK_TEMPLATE: [0x06] - Takes nothing. Marks the current node as Template Node
         
         DATA TYPES
         The only strange one are Strings because of their variable size:
         - STRING: Starts with a [0x00] to indicate that it's a normal String, then it continues until the next 0.
         - STRING_MD: Starts with a [0x01] to indicate that it's a Markdown String, then it continues until the next 0.
-
-        TODO: Implement Compilation
     */
-    std::vector<uint8_t> EcLang::compile(std::string source) {
+    std::vector<uint8_t> EcLang::compile() {
         std::vector<uint8_t> binary;
 
+        // Insert identifier bytes
+        std::vector<uint8_t> languageIdentifier = language->getIdentifierBytes();
+        binary.insert(binary.end(), languageIdentifier.begin(), languageIdentifier.end());
+        binary.push_back(uint8_t(0));
+
+        // Current template loaded
+        // There can be only one (dynamic) template maximum
+        std::string templateFile;
+
+        for (size_t i = 0; i < objects.size(); i++) {
+            Object* object = objects.at(i);
+
+            // If this object comes from this file or was statically included
+            if (object->getSourceFileID() == 0) {
+                // Insert Object Creation Instruction
+                std::vector<uint8_t> compiledObjectCreation = compileObjectCreation(object);
+                binary.insert(binary.end(), compiledObjectCreation.begin(), compiledObjectCreation.end());
+
+                // Check for children, attributes or template tag
+                auto children = object->getObjects();
+                auto attributes = object->getAttributes();
+                // We check if the last element in template node is the same as the current node, if not, this is not a template node
+                // `templateNode` can contain elements if we are using a template (and not creating a template node). This is a bug but shouldn't cause big issues for now
+
+                // TODO: Separate Template Node vector into two (one for this file, one for other files). More information below
+                // We don't care about template nodes that are not from this file. If we're using a template, we are using its template node so we shouldn't
+                // compile it. We should only compile Template Nodes from THIS file. These are template nodes that are not being used but can be used by
+                // other files.
+                bool isTemplate = templateNode.empty() ? false : templateNode.at(templateNode.size()-1) == object;
+
+                // should we have a SCOPE_ENTER? Yes but only if the object has children, attributes or is a template node
+                bool shouldEnterScope = false;
+                if (!children.empty() || !attributes.empty() || isTemplate) {
+                    shouldEnterScope = true;
+                    // Also enter scope, we will use shouldEnterScope to see if we should close it at the end
+                    binary.push_back(INST_SCOPE_ENTER);
+                }
+
+                // Register attributes
+                if (!attributes.empty()) {
+                    auto attributes = object->getAttributes();
+                    for (std::string attribute : attributes) {
+                        // Getting the attribute might fail if the attribute is not registered for that class
+                        // or if the class is not registered in that language. In any of those cases we save
+                        // the attribute as a custom attribute (save INST_ATTR_CUSTOM and a STRING)
+                        try {
+                            uint8_t attributeID = language->getAttributeID(object->getClassName(), attribute);
+                            // Save instruction and attribute ID
+                            binary.push_back(INST_ATTRIBUTE);
+                            binary.push_back(attributeID);
+                            // Save value (shit)
+                            // TODO: Do something with this shit (figure out a cleaner way that doesn't involve filling a switch with 23 elements by hand)
+                            uint8_t objectAttributeID = object->getIDOf(attribute);
+                            switch (language->getAttributeType(object->getClassName(), attribute)) {
+                            case type::INT8: {
+                                auto vector = numberToBytes(object->getInt8Of(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::INT16: {
+                                auto vector = numberToBytes(object->getInt16Of(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::INT32: {
+                                auto vector = numberToBytes(object->getInt32Of(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::INT64: {
+                                auto vector = numberToBytes(object->getInt64Of(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::UINT8: {
+                                auto vector = numberToBytes(object->getUint8Of(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::UINT16: {
+                                auto vector = numberToBytes(object->getUint16Of(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::UINT32: {
+                                auto vector = numberToBytes(object->getUint32Of(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::UINT64: {
+                                auto vector = numberToBytes(object->getUint64Of(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::FLOAT: {
+                                auto vector = numberToBytes(object->getFloatOf(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::DOUBLE: {
+                                auto vector = numberToBytes(object->getDoubleOf(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::STRING: {
+                                auto vector = compileString(object->getStringOf(objectAttributeID));
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::STR_MD: {
+                                auto vector = compileString(object->getStringOf(objectAttributeID), true);
+                                binary.insert(binary.end(), vector.begin(), vector.end());
+                            }   break;
+                            case type::VEC2I: {
+                                vec2i v = object->getVec2iOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                            }   break;
+                            case type::VEC3I: {
+                                vec3i v = object->getVec3iOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                auto num3 = numberToBytes(v.z);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                                binary.insert(binary.end(), num3.begin(), num3.end());
+                            }   break;
+                            case type::VEC4I: {
+                                vec4i v = object->getVec4iOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                auto num3 = numberToBytes(v.z);
+                                auto num4 = numberToBytes(v.w);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                                binary.insert(binary.end(), num3.begin(), num3.end());
+                                binary.insert(binary.end(), num4.begin(), num4.end());
+                            }   break;
+                            case type::VEC2L: {
+                                vec2l v = object->getVec2lOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                            }   break;
+                            case type::VEC3L: {
+                                vec3l v = object->getVec3lOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                auto num3 = numberToBytes(v.z);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                                binary.insert(binary.end(), num3.begin(), num3.end());
+                            }   break;
+                            case type::VEC4L: {
+                                vec4l v = object->getVec4lOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                auto num3 = numberToBytes(v.z);
+                                auto num4 = numberToBytes(v.w);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                                binary.insert(binary.end(), num3.begin(), num3.end());
+                                binary.insert(binary.end(), num4.begin(), num4.end());
+                            }   break;
+                            case type::VEC2F: {
+                                vec2f v = object->getVec2fOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                            }   break;
+                            case type::VEC3F: {
+                                vec3f v = object->getVec3fOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                auto num3 = numberToBytes(v.z);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                                binary.insert(binary.end(), num3.begin(), num3.end());
+                            }   break;
+                            case type::VEC4F: {
+                                vec4f v = object->getVec4fOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                auto num3 = numberToBytes(v.z);
+                                auto num4 = numberToBytes(v.w);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                                binary.insert(binary.end(), num3.begin(), num3.end());
+                                binary.insert(binary.end(), num4.begin(), num4.end());
+                            }   break;
+                            case type::VEC2D: {
+                                vec2d v = object->getVec2dOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                            }   break;
+                            case type::VEC3D: {
+                                vec3d v = object->getVec3dOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                auto num3 = numberToBytes(v.z);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                                binary.insert(binary.end(), num3.begin(), num3.end());
+                            }   break;
+                            case type::VEC4D: {
+                                vec4d v = object->getVec4dOf(objectAttributeID);
+                                auto num1 = numberToBytes(v.x);
+                                auto num2 = numberToBytes(v.y);
+                                auto num3 = numberToBytes(v.z);
+                                auto num4 = numberToBytes(v.w);
+                                binary.insert(binary.end(), num1.begin(), num1.end());
+                                binary.insert(binary.end(), num2.begin(), num2.end());
+                                binary.insert(binary.end(), num3.begin(), num3.end());
+                                binary.insert(binary.end(), num4.begin(), num4.end());
+                            }   break;
+                            }
+                        } catch (...) {
+                            // Uh oh! This instruction wasn't registered for this class (or the class wasn't registered) (probably)
+                            // This part maaaayyyy be called if something above fails but it's probably not a problem (it would indeed be a problem)
+                            // TODO: Fix this entire function, it's hacky and ugly as hell (more information in comment above and other TODOs)
+                            // Save instruction and attribute ID
+                            binary.push_back(INST_ATTRIBUTE);
+                            binary.push_back(INST_ATTR_CUSTOM);
+                            auto attributeName = compileString(attribute);
+                            binary.insert(binary.begin(), attributeName.begin(), attributeName.end());
+                            // Calling getStringOf() on an attribute that is not a String or Markdown String returns whatever the value is (even vectors) as a String
+                            auto valueString = compileString(object->getStringOf(object->getIDOf(attribute)));
+                            binary.insert(binary.begin(), valueString.begin(), valueString.end());
+                        }
+                    }
+                }
+
+                // Close scope
+                if (shouldEnterScope) {
+                    binary.push_back(INST_SCOPE_EXIT);
+                }
+            }
+        }
 
         return binary;
     }
     /**
-        Takes the compiled file (binary) as input and returns a string containing the
-        decompiled source code.
+        returns a string containing the decompiled source code.
 
         This method is called when calling saveToFileSource().
         If this method fails to execute, an exception will be thrown.
@@ -1120,10 +1367,100 @@ namespace eclang {
 
         TODO: Implement Decompilation
     */
-    std::string EcLang::decompile(std::vector<uint8_t> compiled) {
+    std::string EcLang::decompile() {
         std::string source;
 
 
         return source;
+    }
+
+    // COMPILATION / DECOMPILATION HELPER FUNCTIONS
+
+    /**
+        Takes a pointer to an instance of Object and returns the CREATE instruction
+        for it.
+    */
+    std::vector<uint8_t> EcLang::compileObjectCreation(Object* object) {
+        std::vector<uint8_t> binary;
+
+        // Add object creation instruction for this object
+        binary.push_back(INST_CREATE);
+
+        // Add Class Name to Binary
+        if (language->classExists(object->getClassName())) {
+            binary.push_back(language->getClassID(object->getClassName()));
+        } else {
+            // It is possible to use a made up class name instead of a language-specific one
+            // This is a special case. We insert a INST_ATTR_CUSTOM into the binary, which indicates that we're using
+            // a custom class, then we insert a STRING with the class name
+            // TODO: Parser should give a warning when unregistered classes are used
+            binary.push_back(INST_ATTR_CUSTOM);
+            // Insert STRING with Class Name
+            std::vector<uint8_t> className = compileString(object->getClassName());
+            binary.insert(binary.end(), className.begin(), className.end());
+        }
+
+        // Add Object Name to Binary
+        std::vector<uint8_t> objectName = compileString(object->getName());
+        binary.insert(binary.end(), objectName.begin(), objectName.end());
+
+        return binary;
+    }
+
+    /**
+        Takes a std::string and returns that same string in EcLang's binary format.
+    */
+    std::vector<uint8_t> EcLang::compileString(std::string string, bool isMarkdown) {
+        std::vector<uint8_t> binary;
+
+        binary.push_back(isMarkdown ? 1 : 0); // 0 or 1 depending on whether or not this is a markdown string
+        for (char c : string) {
+            binary.push_back(uint8_t(c)); // insert all chars
+        }
+        binary.push_back(0); // NULL-terminate
+
+        return binary;
+    }
+
+    /**
+        Converts a number to an array of bytes
+    */
+    std::vector<uint8_t> EcLang::numberToBytes(int8_t number) {
+        return {*reinterpret_cast<uint8_t*>(&number)};
+    }
+    std::vector<uint8_t> EcLang::numberToBytes(int16_t number) {
+        uint8_t* data = reinterpret_cast<uint8_t*>(&number);
+        return {data[0], data[1]};
+    }
+    std::vector<uint8_t> EcLang::numberToBytes(int32_t number) {
+        uint8_t* data = reinterpret_cast<uint8_t*>(&number);
+        return {data[0], data[1], data[2], data[3]};
+    }
+    std::vector<uint8_t> EcLang::numberToBytes(int64_t number) {
+        uint8_t* data = reinterpret_cast<uint8_t*>(&number);
+        return {data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]};
+    }
+    std::vector<uint8_t> EcLang::numberToBytes(uint8_t number) {
+        return {*reinterpret_cast<uint8_t*>(&number)};
+    }
+    std::vector<uint8_t> EcLang::numberToBytes(uint16_t number) {
+        uint8_t* data = reinterpret_cast<uint8_t*>(&number);
+        return {data[0], data[1]};
+    }
+    std::vector<uint8_t> EcLang::numberToBytes(uint32_t number) {
+        uint8_t* data = reinterpret_cast<uint8_t*>(&number);
+        return {data[0], data[1], data[2], data[3]};
+    }
+    std::vector<uint8_t> EcLang::numberToBytes(uint64_t number) {
+        uint8_t* data = reinterpret_cast<uint8_t*>(&number);
+        return {data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]};
+    }
+    std::vector<uint8_t> EcLang::numberToBytes(float number) {
+        uint8_t* data = reinterpret_cast<uint8_t*>(&number);
+        return {data[0], data[1], data[2], data[3]};
+    }
+    std::vector<uint8_t> EcLang::numberToBytes(double number) {
+        uint8_t* data = reinterpret_cast<uint8_t*>(&number);
+        return {data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]};
     }
 }

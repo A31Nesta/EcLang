@@ -111,22 +111,20 @@ namespace eclang {
         void constructFromBinary(std::vector<uint8_t> compiled);
 
         /**
-            Takes the source file (string) as input and returns a vector of uint8_t
-            containing the compiled file.
+            returns a vector of uint8_t containing the compiled file.
 
             This method is called when calling saveToFileCompiled() if the file is a source file.
         */
-        std::vector<uint8_t> compile(std::string source);
+        std::vector<uint8_t> compile();
         /**
-            Takes the compiled file (binary) as input and returns a string containing the
-            decompiled source code.
+            returns a string containing the decompiled source code.
 
             This method is called when calling saveToFileSource().
             If this method fails to execute, an exception will be thrown.
             Errors can happen if the Language used for compilation is not the same as the
             one used for decompilation (for example due to updates to the language)
         */
-        std::string decompile(std::vector<uint8_t> compiled);
+        std::string decompile();
 
         // FOR USE IN ANOTHER ECLANG
         /**
@@ -142,6 +140,33 @@ namespace eclang {
             a #template tag.
         */
         std::vector<Object*> _getTemplateNodePath();
+
+        // COMPILATION / DECOMPILATION HELPER FUNCTIONS
+
+        /**
+            Takes a pointer to an instance of Object and returns the CREATE instruction
+            for it.
+        */
+        std::vector<uint8_t> compileObjectCreation(Object* object);
+
+        /**
+            Takes a std::string and returns that same string in EcLang's binary format.
+        */
+        std::vector<uint8_t> compileString(std::string string, bool isMarkdown = false);
+
+        /**
+            Converts a number to an array of bytes
+        */
+        std::vector<uint8_t> numberToBytes(int8_t number);
+        std::vector<uint8_t> numberToBytes(int16_t number);
+        std::vector<uint8_t> numberToBytes(int32_t number);
+        std::vector<uint8_t> numberToBytes(int64_t number);
+        std::vector<uint8_t> numberToBytes(uint8_t number);
+        std::vector<uint8_t> numberToBytes(uint16_t number);
+        std::vector<uint8_t> numberToBytes(uint32_t number);
+        std::vector<uint8_t> numberToBytes(uint64_t number);
+        std::vector<uint8_t> numberToBytes(float number);
+        std::vector<uint8_t> numberToBytes(double number);
 
         // Names of files relevant to this file
         // When a file is included or used as template dynamically,

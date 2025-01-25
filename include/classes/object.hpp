@@ -113,6 +113,12 @@ namespace eclang {
         // Not gonna comment all of this lol
         // GET DATA ------------------------
 
+        // TODO: Replace `getXOf()` functions with (or simply add) a `getValueOf(uint8_t attribute, T& value)` (where T can be any of the valid EcLang types)
+        // This function will be overloaded so that instead of returning a value (and thus requiring different names for the functions),
+        // the variable that you pass as reference is modified (which allows overloading, simplifying the API)
+        // TODO: Put the attributes in a map so that IDs can coincide with the Language's Attribute IDs
+        // TODO: Make getXOf() functions accept the name of an attribute and not just an ID
+
         // Int
         int8_t getInt8Of(uint8_t attribute);
         int16_t getInt16Of(uint8_t attribute);

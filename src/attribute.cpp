@@ -297,8 +297,82 @@ namespace eclang {
     }
     // Strings
     // Used for String and Markdown Strings. The only difference between strings and MD strings is how the program interprets them
+    // If this attribute is not a string you will get a "to string" version of the value
     std::string Attribute::getString() {
-        return *(std::string*)bytesValue;
+        switch (type) {
+        case type::INT8:
+            return std::to_string(getInt8());
+        case type::INT16:
+            return std::to_string(getInt16());
+        case type::INT32:
+            return std::to_string(getInt32());
+        case type::INT64:
+            return std::to_string(getInt64());
+        case type::UINT8:
+            return std::to_string(getUint8());
+        case type::UINT16:
+            return std::to_string(getUint16());
+        case type::UINT32:
+            return std::to_string(getUint32());
+        case type::UINT64:
+            return std::to_string(getUint64());
+        case type::FLOAT:
+            return std::to_string(getFloat());
+        case type::DOUBLE:
+            return std::to_string(getDouble());
+        case type::STRING:
+        case type::STR_MD:
+            // THIS IS THE NORMAL RETURN.
+            return *(std::string*)bytesValue;
+        case type::VEC2I: {
+            auto value = getVec2i();
+            return "vec2i("+std::to_string(value.x)+", "+std::to_string(value.y)+")";
+        }
+        case type::VEC3I: {
+            auto value = getVec3i();
+            return "vec3i("+std::to_string(value.x)+", "+std::to_string(value.y)+", "+std::to_string(value.z)+")";
+        }
+        case type::VEC4I: {
+            auto value = getVec4i();
+            return "vec4i("+std::to_string(value.x)+", "+std::to_string(value.y)+", "+std::to_string(value.z)+", "+std::to_string(value.w)+")";
+        }
+        case type::VEC2L: {
+            auto value = getVec2l();
+            return "vec2l("+std::to_string(value.x)+", "+std::to_string(value.y)+")";
+        }
+        case type::VEC3L: {
+            auto value = getVec3l();
+            return "vec3l("+std::to_string(value.x)+", "+std::to_string(value.y)+", "+std::to_string(value.z)+")";
+        }
+        case type::VEC4L: {
+            auto value = getVec4l();
+            return "vec4l("+std::to_string(value.x)+", "+std::to_string(value.y)+", "+std::to_string(value.z)+", "+std::to_string(value.w)+")";
+        }
+        case type::VEC2F: {
+            auto value = getVec2f();
+            return "vec2f("+std::to_string(value.x)+", "+std::to_string(value.y)+")";
+        }
+        case type::VEC3F: {
+            auto value = getVec3f();
+            return "vec3f("+std::to_string(value.x)+", "+std::to_string(value.y)+", "+std::to_string(value.z)+")";
+        }
+        case type::VEC4F: {
+            auto value = getVec4f();
+            return "vec4f("+std::to_string(value.x)+", "+std::to_string(value.y)+", "+std::to_string(value.z)+", "+std::to_string(value.w)+")";
+        }
+        case type::VEC2D: {
+            auto value = getVec2d();
+            return "vec2d("+std::to_string(value.x)+", "+std::to_string(value.y)+")";
+        }
+        case type::VEC3D: {
+            auto value = getVec3d();
+            return "vec3d("+std::to_string(value.x)+", "+std::to_string(value.y)+", "+std::to_string(value.z)+")";
+        }
+        case type::VEC4D: {
+            auto value = getVec4d();
+            return "vec4d("+std::to_string(value.x)+", "+std::to_string(value.y)+", "+std::to_string(value.z)+", "+std::to_string(value.w)+")";
+        }
+        }
     }
     // Vectors
     // int
