@@ -161,6 +161,13 @@ namespace eclang {
         std::vector<uint8_t> compileString(std::string string, bool isMarkdown = false);
 
         /**
+            Takes a pointer to an instance of Object and returns its decompiled code.
+            This function is recursive and will produce the decompiled code for setting
+            the attributes, setting the template tag and creating children objects
+        */
+        std::string decompileObjects(std::vector<Object*> objects, uint8_t tabs = 0);
+
+        /**
             Converts a number to an array of bytes
         */
         std::vector<uint8_t> numberToBytes(int8_t number);

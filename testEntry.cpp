@@ -13,8 +13,12 @@ int main() {
 
     // Compile
     std::cout << "Compiling Source File:\n";
-    testEcLang1.saveToFileCompiled();
+    testEcLang1.saveToFileCompiled("compiled");
     std::cout << "Compiled!!!\n\n";
+    // Decompile
+    std::cout << "Decompiling Source File:\n";
+    testEcLang1.saveToFileSource("decompiled");
+    std::cout << "Decompiled!!!\n\n";
 
     // Try to get allTestData/correctData/stringTest1/string
     eclang::Object* stringTest1 = testEcLang1.getObject("allTestData/correctData/stringTest1");

@@ -628,7 +628,16 @@ namespace eclang {
         if (currentFile != 0) throw std::runtime_error("ECLANG_FATAL: Attempted to compile a dynamically included file");
         // Check: is the name valid?
         if (fileWithoutExtension == "") fileWithoutExtension = includedFilenames[0];
-        // TODO: Implement save to file source
+        
+        const std::string source = decompile();
+        const std::string filename = fileWithoutExtension + "." + language->getExtensionSource();
+
+        std::fstream outputFile(filename, std::ios::out);
+        outputFile << source;
+        outputFile.close();
+        #ifdef ECLANG_DEBUG
+        std::cout << "ECLANG_LOG: Saved Decompiled file to \""+filename+"\"\n";
+        #endif
     }
 
     /**
@@ -1175,12 +1184,14 @@ namespace eclang {
         If this method fails to execute, an exception will be thrown.
         Errors can happen if the Language used for compilation is not the same as the
         one used for decompilation (for example due to updates to the language)
-
-        TODO: Implement Decompilation
     */
     std::string EcLang::decompile() {
         std::string source;
 
+        // Set language
+        source += "#language " + language->getName() + "\n\n";
+        // Get all objects
+        source += decompileObjects(objects);
 
         return source;
     }
@@ -1519,6 +1530,118 @@ namespace eclang {
         binary.push_back(0); // NULL-terminate
 
         return binary;
+    }
+
+    /**
+        Takes a pointer to an instance of Object and returns its decompiled code.
+        This function is recursive and will produce the decompiled code for setting
+        the attributes, setting the template tag and creating children objects
+    */
+    std::string EcLang::decompileObjects(std::vector<Object*> objects, uint8_t tabs) {
+        std::string decompiled;
+        // Tabulation. 1 tab = 4 spaces
+        std::string spacing = "";
+        for (uint8_t i = 0; i < tabs; i++) {
+            spacing += "    ";
+        }
+
+        for (size_t i = 0; i < objects.size(); i++) {
+            Object* object = objects.at(i);
+
+            if (object->getSourceFileID() == 0) {
+                // Insert Object Creation Instruction
+                decompiled += spacing + object->getClassName() + " " + object->getName();
+
+                // Check for children, attributes or template tag
+                auto children = object->getObjects();
+                auto attributes = object->getAttributes();
+                // We check if the last element in template node is the same as the current node, if not, this is not a template node
+                bool isTemplate = templateNode.empty() ? false : templateNode.at(templateNode.size()-1) == object;
+
+                // should we have a SCOPE_ENTER? Yes but only if the object has children, attributes or is a template node
+                bool shouldEnterScope = false;
+                if (!children.empty() || !attributes.empty() || isTemplate) {
+                    shouldEnterScope = true;
+                    // Also enter scope, we will use shouldEnterScope to see if we should close it at the end
+                    decompiled += " {\n";
+                }
+
+                // Set as Template Node
+                if (isTemplate) {
+                    decompiled += spacing + "    #template\n";
+                }
+
+                // Register attributes
+                if (!attributes.empty()) {
+                    auto attributes = object->getAttributes();
+                    for (std::string attribute : attributes) {
+                        std::string value;
+                        if (language->getAttributeType(object->getClassName(), attribute) == type::STRING) {
+                            value = "\""+object->getStringOf(object->getIDOf(attribute))+"\"";
+                        } else if (language->getAttributeType(object->getClassName(), attribute) == type::STR_MD) {
+                            value = "`"+object->getStringOf(object->getIDOf(attribute))+"`";
+                        } else {
+                            value = object->getStringOf(object->getIDOf(attribute));
+                        }
+                        decompiled += spacing + "    " + attribute + " = " + value + ";\n";
+                    }
+                } // register attributes
+
+                // If this object has children
+                if (!children.empty()) {
+                    // We need to pass the children directly to this function (recursively).
+                    // This already takes care of things like includes and templates.
+                    std::string decompiledChildren = decompileObjects(children, tabs+1);
+                    decompiled += decompiledChildren;
+                }
+
+                // Close scope
+                if (shouldEnterScope) {
+                    decompiled += spacing + "}\n";
+                } else {
+                    decompiled += ";\n";
+                }
+
+            } else {
+                // Templates exist and require extra code. If the file is a template we need to get its Template Node
+                // and run `compileObject()` for every child Node with a File ID of 0
+                const uint8_t fileID = object->getSourceFileID();
+                const std::string filenameWithType = includedFilenames.at(fileID);
+                const std::string filename = filenameWithType.substr(1);
+
+                // 't' for template, 'i' for include
+                if (filenameWithType.at(0) == 't') {
+                    decompiled += spacing + "#template-dyn \"" + filename + "\"\n";
+
+                    // INFO: See compileObjects() for more information about why we do this
+                    std::string decompiledChildren = decompileObjects(externalTemplateNode.at(externalTemplateNode.size()-1)->getObjects(), tabs);
+                    decompiled += decompiledChildren;
+                    // We break from the entire loop in order to ignore everything after #template
+                    break;
+                }
+                else {
+                    // First, create the instruction
+                    decompiled += spacing += "#include-dyn \"" + filename + "\"";
+
+                    // Now we just need to continue until we find an object with a different File ID
+                    // We start from this object and continue until we see a different File ID or the vector exits normally
+                    // We then set `i` to be the same as `objectEvaluating` so that we can continue the function normally
+                    for (size_t objectEvaluating = i; objectEvaluating < objects.size(); objectEvaluating++) {
+                        Object* eval = objects.at(objectEvaluating);
+                        if (eval->getSourceFileID() == fileID) {
+                            continue;
+                        }
+                        // The file ID changed! We don't know if we included another file or we're at File ID 0
+                        // but we don't care, we'll take care of that in the next iteration of the main loop.
+                        i = objectEvaluating-1;
+                        break;
+                    }
+                    // The next iteration of this main loop will be AFTER all the included Nodes
+                }
+            }
+        }
+
+        return decompiled;
     }
 
     /**
