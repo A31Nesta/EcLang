@@ -822,7 +822,7 @@ namespace eclang {
     void EcLang::constructFromSource(std::string source) {
         source = source.substr(source.find_first_of('\n')+1); // remove #language tag
         std::vector<lexer::Token> tokens = lexer::tokenizeSource(source, language);
-        
+
         #ifdef ECLANG_DEBUG
         // Print entire lexical analysis
         debugLexer(tokens);
@@ -841,6 +841,7 @@ namespace eclang {
                 if (t.string == "#include") {
                     const lexer::Token& file = tokens.at(current+1); // This should be a String
                     if (file.type != lexer::type::STRING) {
+                        hasErrors = true;
                         std::cerr << "ECLANG_ERROR: Unexpected token \""+file.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". String was expected\n";
                         break;
                     }
@@ -864,6 +865,7 @@ namespace eclang {
                 else if (t.string == "#include-dyn") {
                     const lexer::Token& file = tokens.at(current+1); // This should be a String
                     if (file.type != lexer::type::STRING) {
+                        hasErrors = true;
                         std::cerr << "ECLANG_ERROR: Unexpected token \""+file.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". String was expected\n";
                         break;
                     }
@@ -907,6 +909,13 @@ namespace eclang {
                 else if (t.string == "#template") {
                     const lexer::Token& file = tokens.at(current+1); // This should be a String
                     if (file.type == lexer::type::STRING) {
+                        // We can't use multiple templates in the same file
+                        if (!externalTemplateNode.empty()) {
+                            hasErrors = true;
+                            std::cerr << "ECLANG_ERROR: Using multiple templates (statically or dynamically) in a single file is not permitted.\n";
+                            current += 1;
+                            break;
+                        }
                         // Create child EcLang and append our contents to the specified file's template node
                         #ifdef ECLANG_DEBUG
                         std::cout << "ECLANG_LOG: Statically including Template file: "+file.string+"\n";
@@ -936,7 +945,16 @@ namespace eclang {
                 else if (t.string == "#template-dyn") {
                     const lexer::Token& file = tokens.at(current+1); // This should be a String
                     if (file.type != lexer::type::STRING) {
+                        hasErrors = true;
                         std::cerr << "ECLANG_ERROR: Unexpected token \""+t.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". String was expected\n";
+                        break;
+                    }
+
+                    // We can't use multiple templates in the same file
+                    if (!externalTemplateNode.empty()) {
+                        hasErrors = true;
+                        std::cerr << "ECLANG_ERROR: Using multiple templates (statically or dynamically) in a single file is not permitted.\n";
+                        current += 1;
                         break;
                     }
                     
@@ -983,10 +1001,12 @@ namespace eclang {
                     const lexer::Token& alias = tokens.at(current+1); // This should be a String
                     const lexer::Token& file = tokens.at(current+2); // This should also be a String
                     if (alias.type != lexer::type::STRING) {
+                        hasErrors = true;
                         std::cerr << "ECLANG_ERROR: Unexpected token \""+alias.string+"\" at column "+std::to_string(alias.column)+" at line "+std::to_string(alias.line)+". Usage: #register <alias:Sring> <path:String>\n";
                         break;
                     }
                     if (file.type != lexer::type::STRING) {
+                        hasErrors = true;
                         std::cerr << "ECLANG_ERROR: Unexpected token \""+file.string+"\" at column "+std::to_string(file.column)+" at line "+std::to_string(file.line)+". Usage: #register <alias:Sring> <path:String>\n";
                         break;
                     }
@@ -1004,6 +1024,7 @@ namespace eclang {
                 const lexer::Token& identifier = tokens.at(current+1);
                 const lexer::Token& terminator = tokens.at(current+2); // again, semicolon or enter scope
                 if (identifier.type != lexer::type::IDENTIFIER) {
+                    hasErrors = true;
                     std::cerr << "ECLANG_ERROR: Unexpected token \""+identifier.string+"\" at column "+std::to_string(identifier.column)+" at line "+std::to_string(identifier.line)+". Usage: <Class> <name>; or <Class> <name> {}\n";
                     break;
                 }
@@ -1030,6 +1051,7 @@ namespace eclang {
                     scope.push_back(o);
                 }
                 else {
+                    hasErrors = true;
                     std::cerr << "ECLANG_ERROR: Unexpected token \""+terminator.string+"\" at column "+std::to_string(terminator.column)+" at line "+std::to_string(terminator.line)+". Semicolon or curly braces were expected after Node declaration.\n";
                 }
                 // Update current
@@ -1038,6 +1060,7 @@ namespace eclang {
             case lexer::type::IDENTIFIER: {
                 // This is where things get complex
                 if (scope.size() == 0) {
+                    hasErrors = true;
                     std::cerr << "ECLANG_ERROR: Tried to close root at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+".\n";
                     break;
                 }
@@ -1046,6 +1069,7 @@ namespace eclang {
             } break;
             case lexer::type::SCOPE_EXIT:
                 if (scope.size() == 0) {
+                    hasErrors = true;
                     std::cerr << "ECLANG_ERROR: Tried to close root at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+".\n";
                     break;
                 }
@@ -1059,6 +1083,10 @@ namespace eclang {
                 std::cerr << "ECLANG_ERROR: Unexpected token \""+t.string+"\" at column "+std::to_string(t.column)+" at line "+std::to_string(t.line)+".\n";
                 break;
             }
+        }
+
+        if (hasErrors) {
+            throw std::runtime_error("ECLANG_FATAL: Errors found while parsing. Check for errors above.");
         }
 
         #ifdef ECLANG_DEBUG
@@ -1106,7 +1134,6 @@ namespace eclang {
                 2.F.1. Add a [TEMPLATE] or [INCLUDE] instruction with the file name (NULL-terminated)
                     2.F.1.A. If the file is a Template, we register it so that we can ignore any other node also coming from that file later on
                     2.F.1.B. If the file is a Template and we already included a Template, the compilation fails.
-                        TODO: Make usage of multiple templates illegal in the parser.
 
                 2.F.2. DO NOT ADD ANY OBJECT TO THE BINARY!
                 2.F.3. Continue consuming objects until we see that the next object has a different file ID.
