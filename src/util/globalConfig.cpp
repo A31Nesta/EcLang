@@ -29,7 +29,7 @@ namespace eclang::config {
         // Debug EcLang
         // ------------
         {
-            "test", "elt", "eltc", {'E', 'C', 'L', 'T', 0x31}, {
+            "test", "elt", "eltc", {'E', 'C', 'L', 'T', 0x00000031}, {
                 {"Container"}, // Empty, just to debug putting nodes inside nodes
                 // DEBUG ASSIGN
                 {"StringTests", { // Debug Strings
@@ -82,7 +82,7 @@ namespace eclang::config {
     /**
         Returns all registered languages.
     */
-    std::vector<Language> getLanguages() {
+    std::vector<Language>& getLanguages() {
         return languages;
     }
     /**

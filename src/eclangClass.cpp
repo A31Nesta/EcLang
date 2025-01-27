@@ -606,7 +606,16 @@ namespace eclang {
         if (currentFile != 0) throw std::runtime_error("ECLANG_FATAL: Attempted to compile a dynamically included file");
         // Check: is the name valid?
         if (fileWithoutExtension == "") fileWithoutExtension = includedFilenames[0];
-        // TODO: Implement save to file compiled
+        
+        const std::vector<uint8_t> compiledFile = compile();
+        const std::string filename = fileWithoutExtension + "." + language->getExtensionCompiled();
+
+        std::fstream outputFile(filename, std::ios::out | std::ios::binary);
+        outputFile.write((char*)compiledFile.data(), compiledFile.size());
+        outputFile.close();
+        #ifdef ECLANG_DEBUG
+        std::cout << "ECLANG_LOG: Saved Compiled file to \""+filename+"\"\n";
+        #endif
     }
     /**
         Saves the source EcLang file.
@@ -705,7 +714,7 @@ namespace eclang {
         std::string dataString((char*)dataRaw, size);
 
         // Get all languages
-        std::vector<Language> languages = config::getLanguages();
+        std::vector<Language>& languages = config::getLanguages();
 
         // Identify first bytes
         // --------------------
@@ -904,7 +913,7 @@ namespace eclang {
                         #endif
                         EcLang includedEcLang(file.string);
                         std::vector<Object*> children = includedEcLang._getAllObjectsAsInclude();
-                        std::vector<Object*> templateNode = includedEcLang._getTemplateNodePath();
+                        externalTemplateNode = includedEcLang._getTemplateNodePath();
                         // Add to current object in scope OR simply add to root
                         if (scope.empty()) {
                             objects.insert(objects.end(), children.begin(), children.end());
@@ -912,7 +921,7 @@ namespace eclang {
                             scope.at(scope.size()-1)->_addChildren(children);
                         }
                         // Add template node to current scope (even if any of the vectors is empty)
-                        scope.insert(scope.end(), templateNode.begin(), templateNode.end());
+                        scope.insert(scope.end(), externalTemplateNode.begin(), externalTemplateNode.end());
 
                         // Update current
                         current += 1;
@@ -956,7 +965,7 @@ namespace eclang {
 
                     // Include into our current scene
                     std::vector<Object*> children = includedEcLang._getAllObjectsAsInclude();
-                    std::vector<Object*> templateNode = includedEcLang._getTemplateNodePath();
+                    externalTemplateNode = includedEcLang._getTemplateNodePath();
                     // Add to current object in scope OR simply add to root
                     if (scope.empty()) {
                         objects.insert(objects.end(), children.begin(), children.end());
@@ -964,7 +973,7 @@ namespace eclang {
                         scope.at(scope.size()-1)->_addChildren(children);
                     }
                     // Add template node to current scope (even if any of the vectors is empty)
-                    scope.insert(scope.end(), templateNode.begin(), templateNode.end());
+                    scope.insert(scope.end(), externalTemplateNode.begin(), externalTemplateNode.end());
 
                     // Update current
                     current += 1;
@@ -1126,14 +1135,43 @@ namespace eclang {
         binary.insert(binary.end(), languageIdentifier.begin(), languageIdentifier.end());
         binary.push_back(uint8_t(0));
 
-        // Current template loaded
-        // There can be only one (dynamic) template maximum
-        std::string templateFile;
+        // Save all objects (this function takes care of includes and templates)
+        auto compiledObjects = compileObjects(objects);
+        binary.insert(binary.end(), compiledObjects.begin(), compiledObjects.end());
+
+        return binary;
+    }
+    /**
+        returns a string containing the decompiled source code.
+
+        This method is called when calling saveToFileSource().
+        If this method fails to execute, an exception will be thrown.
+        Errors can happen if the Language used for compilation is not the same as the
+        one used for decompilation (for example due to updates to the language)
+
+        TODO: Implement Decompilation
+    */
+    std::string EcLang::decompile() {
+        std::string source;
+
+
+        return source;
+    }
+
+    // COMPILATION / DECOMPILATION HELPER FUNCTIONS
+
+    /**
+        Takes a pointer to an instance of Object and returns its compiled code.
+        This function is recursive and will produce the compiled code for setting
+        the attributes, setting the template tag and creating children objects
+    */
+    std::vector<uint8_t> EcLang::compileObjects(std::vector<Object*> objects) {
+        // Create container for binary code
+        std::vector<uint8_t> binary;
 
         for (size_t i = 0; i < objects.size(); i++) {
             Object* object = objects.at(i);
 
-            // If this object comes from this file or was statically included
             if (object->getSourceFileID() == 0) {
                 // Insert Object Creation Instruction
                 std::vector<uint8_t> compiledObjectCreation = compileObjectCreation(object);
@@ -1143,12 +1181,6 @@ namespace eclang {
                 auto children = object->getObjects();
                 auto attributes = object->getAttributes();
                 // We check if the last element in template node is the same as the current node, if not, this is not a template node
-                // `templateNode` can contain elements if we are using a template (and not creating a template node). This is a bug but shouldn't cause big issues for now
-
-                // TODO: Separate Template Node vector into two (one for this file, one for other files). More information below
-                // We don't care about template nodes that are not from this file. If we're using a template, we are using its template node so we shouldn't
-                // compile it. We should only compile Template Nodes from THIS file. These are template nodes that are not being used but can be used by
-                // other files.
                 bool isTemplate = templateNode.empty() ? false : templateNode.at(templateNode.size()-1) == object;
 
                 // should we have a SCOPE_ENTER? Yes but only if the object has children, attributes or is a template node
@@ -1157,6 +1189,11 @@ namespace eclang {
                     shouldEnterScope = true;
                     // Also enter scope, we will use shouldEnterScope to see if we should close it at the end
                     binary.push_back(INST_SCOPE_ENTER);
+                }
+
+                // Set as Template Node
+                if (isTemplate) {
+                    binary.push_back(INST_MARK_TEMPLATE);
                 }
 
                 // Register attributes
@@ -1340,42 +1377,77 @@ namespace eclang {
                             binary.push_back(INST_ATTRIBUTE);
                             binary.push_back(INST_ATTR_CUSTOM);
                             auto attributeName = compileString(attribute);
-                            binary.insert(binary.begin(), attributeName.begin(), attributeName.end());
+                            binary.insert(binary.end(), attributeName.begin(), attributeName.end());
                             // Calling getStringOf() on an attribute that is not a String or Markdown String returns whatever the value is (even vectors) as a String
                             auto valueString = compileString(object->getStringOf(object->getIDOf(attribute)));
-                            binary.insert(binary.begin(), valueString.begin(), valueString.end());
+                            binary.insert(binary.end(), valueString.begin(), valueString.end());
                         }
                     }
+                } // register attributes
+
+                // If this object has children
+                if (!children.empty()) {
+                    // We need to pass the children directly to this function (recursively).
+                    // This already takes care of things like includes and templates.
+                    auto compiledChildren = compileObjects(children);
+                    binary.insert(binary.end(), compiledChildren.begin(), compiledChildren.end());
                 }
 
                 // Close scope
                 if (shouldEnterScope) {
                     binary.push_back(INST_SCOPE_EXIT);
                 }
+
+            } else {
+                // Templates exist and require extra code. If the file is a template we need to get its Template Node
+                // and run `compileObject()` for every child Node with a File ID of 0
+                const uint8_t fileID = object->getSourceFileID();
+                const std::string filenameWithType = includedFilenames.at(fileID);
+                const std::string filename = filenameWithType.substr(1);
+
+                // 't' for template, 'i' for include
+                if (filenameWithType.at(0) == 't') {
+                    // Create the instruction
+                    binary.push_back(INST_TEMPLATE);
+                    auto compiledFilename = compileString(filename);
+                    binary.insert(binary.end(), compiledFilename.begin(), compiledFilename.end());
+
+                    // we get the Template Node and run this function on its children
+                    // INFO: There can be only one Template included so it's OK (albeit a bit hacky) to just read the Temaplate Node object saved into this object
+                    // We then IGNORE all the remaining nodes
+                    // INFO: We are IGNORING all nodes that come after the Template node.
+                    // This is fine because anything below a Template inclusion goes into its Template Node
+                    auto compiledChildren = compileObjects(externalTemplateNode.at(externalTemplateNode.size()-1)->getObjects());
+                    binary.insert(binary.end(), compiledChildren.begin(), compiledChildren.end());
+                    // We break from the entire loop in order to ignore everything after #template
+                    break;
+                }
+                else {
+                    // First, create the instruction
+                    binary.push_back(INST_INCLUDE);
+                    auto compiledFilename = compileString(filename);
+                    binary.insert(binary.end(), compiledFilename.begin(), compiledFilename.end());
+
+                    // Now we just need to continue until we find an object with a different File ID
+                    // We start from this object and continue until we see a different File ID or the vector exits normally
+                    // We then set `i` to be the same as `objectEvaluating` so that we can continue the function normally
+                    for (size_t objectEvaluating = i; objectEvaluating < objects.size(); objectEvaluating++) {
+                        Object* eval = objects.at(objectEvaluating);
+                        if (eval->getSourceFileID() == fileID) {
+                            continue;
+                        }
+                        // The file ID changed! We don't know if we included another file or we're at File ID 0
+                        // but we don't care, we'll take care of that in the next iteration of the main loop.
+                        i = objectEvaluating-1;
+                        break;
+                    }
+                    // The next iteration of this main loop will be AFTER all the included Nodes
+                }
             }
         }
 
         return binary;
     }
-    /**
-        returns a string containing the decompiled source code.
-
-        This method is called when calling saveToFileSource().
-        If this method fails to execute, an exception will be thrown.
-        Errors can happen if the Language used for compilation is not the same as the
-        one used for decompilation (for example due to updates to the language)
-
-        TODO: Implement Decompilation
-    */
-    std::string EcLang::decompile() {
-        std::string source;
-
-
-        return source;
-    }
-
-    // COMPILATION / DECOMPILATION HELPER FUNCTIONS
-
     /**
         Takes a pointer to an instance of Object and returns the CREATE instruction
         for it.

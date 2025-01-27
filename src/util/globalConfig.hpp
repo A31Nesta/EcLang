@@ -5,7 +5,7 @@ namespace eclang::config {
     /**
         Returns all registered languages.
     */
-    extern std::vector<Language> getLanguages();
+    extern std::vector<Language>& getLanguages();
     /**
         Registers a language.
         Allows you to use this language for

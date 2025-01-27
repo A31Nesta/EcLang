@@ -8,8 +8,13 @@ int main() {
 
     std::cout << "Testing Source File:\n";
     eclang::EcLang testEcLang1("testFile.elt");
-    std::cout << "Testing Binary File:\n";
-    eclang::EcLang testEcLang2("testFile.eltc");
+    // std::cout << "Testing Binary File:\n";
+    // eclang::EcLang testEcLang2("testFile.eltc");
+
+    // Compile
+    std::cout << "Compiling Source File:\n";
+    testEcLang1.saveToFileCompiled();
+    std::cout << "Compiled!!!\n\n";
 
     // Try to get allTestData/correctData/stringTest1/string
     eclang::Object* stringTest1 = testEcLang1.getObject("allTestData/correctData/stringTest1");

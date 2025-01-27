@@ -144,6 +144,12 @@ namespace eclang {
         // COMPILATION / DECOMPILATION HELPER FUNCTIONS
 
         /**
+            Takes a pointer to an instance of Object and returns its compiled code.
+            This function is recursive and will produce the compiled code for setting
+            the attributes, setting the template tag and creating children objects
+        */
+        std::vector<uint8_t> compileObjects(std::vector<Object*> objects);
+        /**
             Takes a pointer to an instance of Object and returns the CREATE instruction
             for it.
         */
@@ -216,6 +222,9 @@ namespace eclang {
         // The stack (scope) that corresponds to the template node.
         // Empty if there are no template nodes
         std::vector<Object*> templateNode;
+        // The template node of the template imported
+        // Empty if no template was included
+        std::vector<Object*> externalTemplateNode;
 
         // The current file. When a file is dynamically included,
         // the current file index goes up and the name is registered

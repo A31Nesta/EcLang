@@ -373,6 +373,9 @@ namespace eclang {
             return "vec4d("+std::to_string(value.x)+", "+std::to_string(value.y)+", "+std::to_string(value.z)+", "+std::to_string(value.w)+")";
         }
         }
+
+        // shouldn't happen but I was getting a warning
+        return *(std::string*)bytesValue;
     }
     // Vectors
     // int
