@@ -1415,6 +1415,7 @@ namespace eclang {
                 } else {
                     scope.at(scope.size()-1)->_addChildren(children);
                 }
+                break;
             }
             case INST_TEMPLATE: {
                 // We can't use multiple templates in the same file
@@ -1454,9 +1455,11 @@ namespace eclang {
                 }
                 // Add template node to current scope (even if any of the vectors is empty)
                 scope.insert(scope.end(), externalTemplateNode.begin(), externalTemplateNode.end());
+                break;
             }
             case INST_MARK_TEMPLATE: {
                 templateNode = scope;
+                break;
             }
             }
         }
@@ -1956,7 +1959,7 @@ namespace eclang {
                 }
                 else {
                     // First, create the instruction
-                    decompiled += spacing += "#include-dyn \"" + filename + "\"";
+                    decompiled += spacing + "#include-dyn \"" + filename + "\"\n";
 
                     // Now we just need to continue until we find an object with a different File ID
                     // We start from this object and continue until we see a different File ID or the vector exits normally
