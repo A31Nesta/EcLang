@@ -156,11 +156,6 @@ namespace eclang {
         std::vector<uint8_t> compileObjectCreation(Object* object);
 
         /**
-            Takes a std::string and returns that same string in EcLang's binary format.
-        */
-        std::vector<uint8_t> compileString(std::string string, bool isMarkdown = false);
-
-        /**
             Takes a pointer to an instance of Object and returns its decompiled code.
             This function is recursive and will produce the decompiled code for setting
             the attributes, setting the template tag and creating children objects

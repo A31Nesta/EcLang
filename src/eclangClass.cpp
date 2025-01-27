@@ -488,6 +488,242 @@ namespace eclang {
         return 0;
     }
 
+    /**
+        Takes a std::string and returns that same string in EcLang's binary format.
+    */
+    std::vector<uint8_t> compileString(std::string string, bool isMarkdown = false) {
+        std::vector<uint8_t> binary;
+
+        binary.push_back(isMarkdown ? 1 : 0); // 0 or 1 depending on whether or not this is a markdown string
+        for (char c : string) {
+            binary.push_back(uint8_t(c)); // insert all chars
+        }
+        binary.push_back(0); // NULL-terminate
+
+        return binary;
+    }
+    /**
+        Takes a stream of bytes and an index and reads until the next 0.
+        This function will set the index passed to the position after the string
+        This string will have a 'n' or a 'm' prefix indicating whether it is
+        a Normal String or a Markdown String
+    */
+    std::string decompileString(std::vector<uint8_t>& binary, size_t& index) {
+        // Get the type of String
+        char prefix;
+        if (binary.at(index) == 0) {
+            prefix = 'n';
+        } else {
+            prefix = 'm';
+        }
+
+        std::string decompiled;
+
+        // Get all the chars until we see a 0
+        for (size_t i = index+1; i < binary.size(); i++) {
+            if (binary.at(i) == 0) {
+                index = i;
+                break;
+            }
+
+            decompiled += binary.at(i);
+        }
+
+        return prefix + decompiled;
+    }
+
+    /**
+        Creates an Attribute object by reading raw binary data.
+        This function obtains the value of the attribute by reading the type
+        of the data
+    */
+    Attribute* createAttributeFromBinary(std::vector<uint8_t>& binary, size_t& index, uint8_t classID, Language* language) {
+        // Get the Name and Type of the attribute
+        std::string attributeName = language->getAttributeName(classID, binary.at(index));
+        type::Type type = language->getAttributeType(classID, binary.at(index));
+        index++;
+
+        // Get the value
+        switch (type) {
+        case type::INT8: {
+            int8_t value = *reinterpret_cast<int8_t*>(&binary.at(index));
+            return new Attribute(attributeName, value);
+        }
+        case type::INT16: {
+            uint8_t bytes[2];
+            bytes[0] = binary.at(index);
+            bytes[1] = binary.at(index+1);
+            index += 1;
+            int16_t value = *reinterpret_cast<int16_t*>(&bytes);
+            return new Attribute(attributeName, value);
+        }
+        case type::INT32: {
+            uint8_t bytes[4];
+            bytes[0] = binary.at(index);
+            bytes[1] = binary.at(index+1);
+            bytes[2] = binary.at(index+2);
+            bytes[3] = binary.at(index+3);
+            index += 3;
+            int32_t value = *reinterpret_cast<int32_t*>(&bytes);
+            return new Attribute(attributeName, value);
+        }
+        case type::INT64: {
+            uint8_t bytes[8];
+            bytes[0] = binary.at(index);
+            bytes[1] = binary.at(index+1);
+            bytes[2] = binary.at(index+2);
+            bytes[3] = binary.at(index+3);
+            bytes[4] = binary.at(index+4);
+            bytes[5] = binary.at(index+5);
+            bytes[6] = binary.at(index+6);
+            bytes[7] = binary.at(index+7);
+            index += 7;
+            int64_t value = *reinterpret_cast<int64_t*>(&bytes);
+            return new Attribute(attributeName, value);
+        }
+        case type::UINT8: {
+            return new Attribute(attributeName, binary.at(index));
+        }
+        case type::UINT16: {
+            uint8_t bytes[2];
+            bytes[0] = binary.at(index);
+            bytes[1] = binary.at(index+1);
+            index += 1;
+            uint16_t value = *reinterpret_cast<uint16_t*>(&bytes);
+            return new Attribute(attributeName, value);
+        }
+        case type::UINT32: {
+            uint8_t bytes[4];
+            bytes[0] = binary.at(index);
+            bytes[1] = binary.at(index+1);
+            bytes[2] = binary.at(index+2);
+            bytes[3] = binary.at(index+3);
+            index += 3;
+            uint32_t value = *reinterpret_cast<uint32_t*>(&bytes);
+            return new Attribute(attributeName, value);
+        }
+        case type::UINT64: {
+            uint8_t bytes[8];
+            bytes[0] = binary.at(index);
+            bytes[1] = binary.at(index+1);
+            bytes[2] = binary.at(index+2);
+            bytes[3] = binary.at(index+3);
+            bytes[4] = binary.at(index+4);
+            bytes[5] = binary.at(index+5);
+            bytes[6] = binary.at(index+6);
+            bytes[7] = binary.at(index+7);
+            index += 7;
+            uint64_t value = *reinterpret_cast<uint64_t*>(&bytes);
+            return new Attribute(attributeName, value);
+        }
+        case type::FLOAT: {
+            uint8_t bytes[4];
+            bytes[0] = binary.at(index);
+            bytes[1] = binary.at(index+1);
+            bytes[2] = binary.at(index+2);
+            bytes[3] = binary.at(index+3);
+            index += 3;
+            float value = *reinterpret_cast<float*>(&bytes);
+            return new Attribute(attributeName, value);
+        }
+        case type::DOUBLE: {
+            uint8_t bytes[8];
+            bytes[0] = binary.at(index);
+            bytes[1] = binary.at(index+1);
+            bytes[2] = binary.at(index+2);
+            bytes[3] = binary.at(index+3);
+            bytes[4] = binary.at(index+4);
+            bytes[5] = binary.at(index+5);
+            bytes[6] = binary.at(index+6);
+            bytes[7] = binary.at(index+7);
+            index += 7;
+            double value = *reinterpret_cast<double*>(&bytes);
+            return new Attribute(attributeName, value);
+        }
+        case type::STRING: {
+            std::string value = decompileString(binary, index);
+            return new Attribute(attributeName, value.substr(1), type::STRING);
+        }
+        case type::STR_MD: {
+            std::string value = decompileString(binary, index);
+            return new Attribute(attributeName, value.substr(1), type::STR_MD);
+        }
+        case type::VEC2I: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec2i));
+            index += sizeof(vec2i) - 1;
+            vec2i value = *reinterpret_cast<vec2i*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC3I: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec3i));
+            index += sizeof(vec3i) - 1;
+            vec3i value = *reinterpret_cast<vec3i*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC4I: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec4i));
+            index += sizeof(vec4i) - 1;
+            vec4i value = *reinterpret_cast<vec4i*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC2L: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec2l));
+            index += sizeof(vec2l) - 1;
+            vec2l value = *reinterpret_cast<vec2l*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC3L: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec3l));
+            index += sizeof(vec3l) - 1;
+            vec3l value = *reinterpret_cast<vec3l*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC4L: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec4l));
+            index += sizeof(vec4l) - 1;
+            vec4l value = *reinterpret_cast<vec4l*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC2F: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec2f));
+            index += sizeof(vec2f) - 1;
+            vec2f value = *reinterpret_cast<vec2f*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC3F: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec3f));
+            index += sizeof(vec3f) - 1;
+            vec3f value = *reinterpret_cast<vec3f*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC4F: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec4f));
+            index += sizeof(vec4f) - 1;
+            vec4f value = *reinterpret_cast<vec4f*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC2D: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec2d));
+            index += sizeof(vec2d) - 1;
+            vec2d value = *reinterpret_cast<vec2d*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC3D: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec3d));
+            index += sizeof(vec3d) - 1;
+            vec3d value = *reinterpret_cast<vec3d*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        case type::VEC4D: {
+            std::vector<uint8_t> subVec(binary.begin() + index, binary.begin() + index + sizeof(vec4d));
+            index += sizeof(vec4d) - 1;
+            vec4d value = *reinterpret_cast<vec4d*>(subVec.data());
+            return new Attribute(attributeName, value);
+        }
+        }
+        return nullptr;
+    }
+
     // PUBLIC
     // ------
 
@@ -1100,16 +1336,130 @@ namespace eclang {
 
         #ifdef ECLANG_DEBUG
         // Prints the tree and some info
-        std::cout << "-------------------------------------------------\n";
-        debugObjectsRecursive(objects);
-        std::cout << "-------------------------------------------------\n";
+        // std::cout << "-------------------------------------------------\n";
+        // debugObjectsRecursive(objects);
+        // std::cout << "-------------------------------------------------\n";
         #endif
     }
     /**
         Constructs all the Object objects by reading a binary file.
     */
     void EcLang::constructFromBinary(std::vector<uint8_t> compiled) {
-        // TODO: Implement reading binary file
+        // Remove language bytes
+        // We remove the (number of identifier bytes + 0 (null termination)) first bytes
+        compiled.erase(compiled.begin(), compiled.begin()+language->getIdentifierBytes().size()+1);
+
+        // Current Class ID
+        uint8_t classID = 0;
+
+        for (size_t i = 0; i < compiled.size(); i++) {
+            // 7 types of instructions
+            switch (compiled.at(i)) {
+            case INST_CREATE: {
+                // Get Class Name
+                i++;
+                classID = compiled.at(i);
+                std::string className = language->getClassName(classID);
+                // Get Object Name
+                i++;
+                std::string objectName = decompileString(compiled, i).substr(1); // Remove prefix
+                // Create
+                objects.push_back(new Object(className, objectName, currentFile));
+                break;
+            }
+            case INST_ATTRIBUTE: {
+                i++;
+                Attribute* attribute = createAttributeFromBinary(compiled, i, classID, language);
+                break;
+            }
+            case INST_SCOPE_ENTER: {
+                // Get last object saved and put it in scope
+                if (objects.empty()) { break; }
+                scope.push_back(objects.at(objects.size()-1));
+                break;
+            }
+            case INST_SCOPE_EXIT: {
+                if (scope.empty()) { break; }
+                scope.pop_back();
+                break;
+            }
+            case INST_INCLUDE: {
+                // Get File we're including
+                i++;
+                std::string file = decompileString(compiled, i).substr(1);
+
+                uint8_t includedFile = (currentFile==0) ? includedFilenames.size() : currentFile;
+
+                #ifdef ECLANG_DEBUG 
+                if (currentFile != 0) {
+                    std::cout << "ECLANG_LOG: Dynamic inclusion detected in dynamically included file... including statically: "+file+"\n";
+                } else {
+                    std::cout << "ECLANG_LOG: Dynamically including file: "+file+"\n";
+                }
+                #endif
+
+                EcLang includedEcLang(file, includedFile);
+                
+                // We only have to do this if this is the file included by the user.
+                // We register the path so that the file ID actually points to something
+                // The extra "i" indicates that this is an Include, not a Template
+                if (currentFile == 0) {
+                    includedFilenames.push_back("i"+file);
+                }
+
+                // Include into our current scene
+                std::vector<Object*> children = includedEcLang._getAllObjectsAsInclude();
+                // Add to current object in scope OR simply add to root
+                if (scope.empty()) {
+                    objects.insert(objects.end(), children.begin(), children.end());
+                } else {
+                    scope.at(scope.size()-1)->_addChildren(children);
+                }
+            }
+            case INST_TEMPLATE: {
+                // We can't use multiple templates in the same file
+                if (!externalTemplateNode.empty()) {
+                    throw std::runtime_error("ECLANG_ERROR: Using multiple templates (statically or dynamically) in a single file is not permitted.\n");
+                }
+
+                // Get File we're including
+                i++;
+                std::string file = decompileString(compiled, i).substr(1);
+                
+                uint8_t includedFile = (currentFile==0) ? includedFilenames.size() : currentFile;
+
+                #ifdef ECLANG_DEBUG 
+                if (currentFile != 0) {
+                    std::cout << "ECLANG_LOG: Dynamic inclusion detected in dynamically included Template file... including statically: "+file+"\n";
+                } else {
+                    std::cout << "ECLANG_LOG: Dynamically including Template file: "+file+"\n";
+                }
+                #endif
+
+                EcLang includedEcLang(file, includedFile);
+                
+                // Register filename
+                if (currentFile == 0) {
+                    includedFilenames.push_back("t"+file);
+                }
+
+                // Include into our current scene
+                std::vector<Object*> children = includedEcLang._getAllObjectsAsInclude();
+                externalTemplateNode = includedEcLang._getTemplateNodePath();
+                // Add to current object in scope OR simply add to root
+                if (scope.empty()) {
+                    objects.insert(objects.end(), children.begin(), children.end());
+                } else {
+                    scope.at(scope.size()-1)->_addChildren(children);
+                }
+                // Add template node to current scope (even if any of the vectors is empty)
+                scope.insert(scope.end(), externalTemplateNode.begin(), externalTemplateNode.end());
+            }
+            case INST_MARK_TEMPLATE: {
+                templateNode = scope;
+            }
+            }
+        }
     }
 
     /**
@@ -1513,21 +1863,6 @@ namespace eclang {
         // Add Object Name to Binary
         std::vector<uint8_t> objectName = compileString(object->getName());
         binary.insert(binary.end(), objectName.begin(), objectName.end());
-
-        return binary;
-    }
-
-    /**
-        Takes a std::string and returns that same string in EcLang's binary format.
-    */
-    std::vector<uint8_t> EcLang::compileString(std::string string, bool isMarkdown) {
-        std::vector<uint8_t> binary;
-
-        binary.push_back(isMarkdown ? 1 : 0); // 0 or 1 depending on whether or not this is a markdown string
-        for (char c : string) {
-            binary.push_back(uint8_t(c)); // insert all chars
-        }
-        binary.push_back(0); // NULL-terminate
 
         return binary;
     }
